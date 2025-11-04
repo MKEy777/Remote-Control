@@ -1,0 +1,44 @@
+# ---- Visual Studio ----
+.vs/
+*.user
+*.suo
+*.ipch
+*.VC.db
+*.VC.opendb
+*.obj
+*.exe
+*.pdb
+*.idb
+*.ilk
+*.log
+*.tlog
+*.lastbuildstate
+*.cachefile
+*.aps
+*.ncb
+*.opensdf
+*.sdf
+*.VC.db
+*.VC.VC.opendb
+
+# ---- Build outputs ----
+bin/
+obj/
+Debug/
+Release/
+x64/
+x86/
+
+# ---- Other ----
+*.tmp
+*.bak
+*.swp
+*.psess
+*.vsp
+*.vshost.exe
+*.vshost.exe.manifest
+*.db
+*.ipch
+*.json
+*.db-wal
+*.db-shm
