@@ -5,6 +5,7 @@
 #include "framework.h"
 #include "Remote_Control.h"
 #include "ServerSocket.h"
+#include <direct.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -18,6 +19,38 @@
 CWinApp theApp;
 
 using namespace std;
+
+void Dump(BYTE* pData, size_t nSize) {//调试输出十六进制数据
+	std::string out;
+    for (size_t i = 0;i < nSize;i++) {
+        char buf[8] = "";
+        sprintf_s(buf, sizeof(buf), "%02X ", pData[i]);//把一个字节格式化成可读的十六进制字符串
+        out += buf;
+    }
+	out += '\n';
+	OutputDebugStringA(out.c_str());//将字符串输出到 Visual Studio 的“输出”窗口（Debug 模式下可见）
+}
+
+//查看本地磁盘分区，并把信息打包成数据包
+int MakeDriverInfo() {
+    std::string result;
+    for (int i = 1; i <= 26; i++)//遍历磁盘符
+    {
+        if (_chdrive(i) == 0)//切换成功，利用切换磁盘分区的方法来遍历磁盘符
+        {
+            if (result.size() > 0)
+                result += ',';
+            result += 'A' + i - 1;//得到盘符
+        }
+    }
+
+    CPacket pack(1, (BYTE*)result.c_str(), result.size());//打包
+
+    //调试与发送
+    Dump((BYTE*)pack.Data(), pack.Size());
+    CServerSocket::GetInstance()->Send(pack);
+    return 0;
+}
 
 int main()
 {
@@ -36,7 +69,8 @@ int main()
         }
         else
         {
-			CServerSocket* pserver = CServerSocket::GetInstance();
+            MakeDriverInfo();
+			/*CServerSocket* pserver = CServerSocket::GetInstance();
 			int count = 0;
             while (CServerSocket::GetInstance() != nullptr) {
                 if (pserver->InitSocket() == false) {
@@ -52,7 +86,8 @@ int main()
 					count++;
                 }
 				int ret = pserver->DealCommand();
-            }
+            }*/
+
         }
     }
     else

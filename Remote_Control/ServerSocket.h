@@ -16,8 +16,29 @@ public:
 		return *this;
 	}
 	//数据包封包构造函数，用于把数据封装成数据包
-	CPacket(WORD nCmd,const BYTE* pData, size_t& nSize) {
-		
+	CPacket(WORD nCmd,const BYTE* pData, size_t nSize) {
+		// 1. 设定包头
+		sHead = 0xFEFF;
+		nLength = nSize + 4;
+		sCmd = nCmd;
+
+		// 2. 复制数据体
+		if (nSize > 0)
+		{
+			strData.resize(nSize);
+			memcpy(&strData[0], pData, nSize);
+		}
+		else
+		{
+			strData.clear();//无数据清空
+		}
+
+		// 3. 计算校验和
+		sSum = 0;
+		for (size_t j = 0; j < strData.size(); j++)
+		{
+			sSum += BYTE(strData[j]) & 0xFF;
+		}
 	}
 
 	//数据包解包，将包中的数据分配到成员变量中
@@ -83,13 +104,28 @@ public:
 	}
 
 	~CPacket() {
-		
 	}
+
+	int Size() const {
+		return 6 + nLength; 
+	}
+
+    const char* Data() {
+        strOut.resize(Size());
+        BYTE* pData = (BYTE*)&strOut[0];
+		*(WORD*)(pData) = sHead;
+		*(DWORD*)(pData + 2) = nLength;
+		*(WORD*)(pData + 6) = sCmd;
+		memcpy(pData + 8, &strData[0], nLength - 4);
+		*(WORD*)(pData + Size()-2) = sSum;
+        return &strOut[0];
+    }
 	WORD sHead;         //包头
 	DWORD nLength;      //包长度,从命令字段到校验码的总长度
 	WORD sCmd;          //命令字
 	std::string strData;//数据
 	WORD sSum;          //校验和
+	std::string strOut; //整个包的数据
 	
 };
 
@@ -142,7 +178,7 @@ class CServerSocket//单例模式
 				len = index;
                 m_packet=CPacket((BYTE*)buffer, (size_t&)len);
 				if (len > 0) {
-					memmove(buffer, buffer + len, sizeof(buffer) - len);//移除已处理的数据
+					memmove(buffer, buffer + len, BUFFER_SIZE - len);//移除已处理的数据
 					index -= len;
 					return m_packet.sCmd;
 				}
@@ -150,9 +186,30 @@ class CServerSocket//单例模式
 			}
 			return 0;
 		}
-		bool Send(const char* pData, int nSize) {
+		bool Send(const char* pData, int nSize) {// 发送原始数据
 			if (m_client == -1) return false;
 			return send(m_client, pData, nSize, 0)>0;
+		}
+		bool Send(const CPacket& packet) {// 发送CPacket数据包
+			if (m_client == -1) return false;
+			size_t nSize = 6 + packet.nLength; // 包头(2) + 长度(4) + 命令(2) + 数据 + 校验(2)
+			BYTE* pData = new BYTE[nSize];
+			// ① 包头
+			*(WORD*)(pData) = packet.sHead;
+			// ② 长度
+			*(DWORD*)(pData + 2) = packet.nLength;
+			// ③ 命令
+			*(WORD*)(pData + 6) = packet.sCmd;
+			// ④ 数据体
+			if (packet.nLength > 4)
+			{
+				memcpy(pData + 8, packet.strData.c_str(), packet.nLength - 4);
+			}
+			// ⑤ 校验码
+			*(WORD*)(pData + 4 + packet.nLength) = packet.sSum;
+			bool bRet = send(m_client, (const char*)pData, nSize, 0) > 0;
+			delete[] pData;
+			return bRet;
 		}
 	private:
 		SOCKET m_sock = INVALID_SOCKET;
@@ -193,6 +250,7 @@ class CServerSocket//单例模式
 			}
 		}
 		static CServerSocket* m_instance;
+
 		class CHelper {
 		public:
 			CHelper() {
