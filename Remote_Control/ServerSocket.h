@@ -92,6 +92,17 @@ public:
 	WORD sSum;          //校验和
 	
 };
+typedef struct MouseEvent{
+	MouseEvent() {
+		nAction = 0;
+		nButton = -1;
+		ptXY.x = 0;
+		ptXY.y = 0;
+	}
+	WORD nAction;//点击、移动、双击
+	WORD nButton;//左键、中键、右键
+	POINT ptXY;//坐标
+}MOUSEEV,*PMOUSEEV;
 
 
 class CServerSocket//单例模式
@@ -153,6 +164,43 @@ class CServerSocket//单例模式
 		bool Send(const char* pData, int nSize) {
 			if (m_client == -1) return false;
 			return send(m_client, pData, nSize, 0)>0;
+		}
+		bool Send(const CPacket& packet) {// 发送CPacket数据包
+			if (m_client == -1) return false;
+			size_t nSize = 6 + packet.nLength; // 包头(2) + 长度(4) + 命令(2) + 数据 + 校验(2)
+			BYTE* pData = new BYTE[nSize];
+			// ① 包头
+			*(WORD*)(pData) = packet.sHead;
+			// ② 长度
+			*(DWORD*)(pData + 2) = packet.nLength;
+			// ③ 命令
+			*(WORD*)(pData + 6) = packet.sCmd;
+			// ④ 数据体
+			if (packet.nLength > 4)
+			{
+				memcpy(pData + 8, packet.strData.c_str(), packet.nLength - 4);
+			}
+			// ⑤ 校验码
+			*(WORD*)(pData + 4 + packet.nLength) = packet.sSum;
+			bool bRet = send(m_client, (const char*)pData, nSize, 0) > 0;
+			delete[] pData;
+			return bRet;
+		}
+		bool GetFilePath(std::string& strPath) {
+			if (m_packet.sCmd >= 2&& m_packet.sCmd <=4) {
+				strPath = m_packet.strData;
+				return true;
+			}
+			return false;
+		}
+		bool GetMouseEvent(MOUSEEV &MouseEv) {
+			if (m_packet.sCmd == 5) {
+				if (m_packet.strData.size() == sizeof(MOUSEEV)) {
+					memcpy(&MouseEv, m_packet.strData.c_str(), sizeof(MOUSEEV));
+					return true;
+				}
+			}
+			return false;
 		}
 	private:
 		SOCKET m_sock = INVALID_SOCKET;
