@@ -26,7 +26,7 @@ public:
 		sCmd = nCmd;
 		if (nSize > 0) {
 			strData.resize(nSize);
-			memcpy((void*)strData.c_str(), pData, nSize);
+			memcpy(&strData[0], pData, nSize);
 		}
 		else {
 			strData.clear();
@@ -109,7 +109,7 @@ public:
 	}
 	const char* Data() {
 		strOut.resize(nLength + 6);
-		BYTE* pData = (BYTE*)strOut.c_str();
+		BYTE* pData = (BYTE*)&strOut[0];
 		*(WORD*)pData = sHead; pData += 2;
 		*(DWORD*)(pData) = nLength; pData += 4;
 		*(WORD*)pData = sCmd; pData += 2;
@@ -160,14 +160,16 @@ public:
 		}
 		return m_instance;
 	}
-	bool InitSocket(const std::string& strIPAddress) {
+	bool InitSocket(int nIP,int nPort) {
+		if (m_sock != -1) CloseSocket();
+		m_sock = socket(PF_INET, SOCK_STREAM, 0);
 		if (m_sock == -1) return false;
 
 		sockaddr_in ser_adr;
 		memset(&ser_adr, 0, sizeof(ser_adr));
 		ser_adr.sin_family = AF_INET;
-		ser_adr.sin_addr.s_addr = inet_addr(strIPAddress.c_str());
-		ser_adr.sin_port = htons(9527);
+		ser_adr.sin_addr.s_addr =nIP;
+		ser_adr.sin_port = htons(nPort);
 
 		int ret = connect(m_sock, (sockaddr*)&ser_adr, sizeof(ser_adr)); // 连接服务器；(套接字，地址结构体指针，结构体大小)
 		if (ret == -1) {
@@ -252,6 +254,10 @@ public:
 			}
 		}
 		return false;
+	}
+	void CloseSocket() {
+		closesocket(m_sock);
+		m_sock = INVALID_SOCKET;
 	}
 	CPacket& GetPacket() {
 		return m_packet;

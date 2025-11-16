@@ -1,4 +1,3 @@
-
 // RemoteClientDlg.cpp : implementation file
 //
 
@@ -11,6 +10,8 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
+
+
 
 
 // CAboutDlg dialog used for App About
@@ -52,6 +53,8 @@ END_MESSAGE_MAP()
 
 CRemoteClientDlg::CRemoteClientDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_REMOTECLIENT_DIALOG, pParent)
+	, m_serv_address(0)
+	, m_nPort(_T(""))
 {
 	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
 }
@@ -59,6 +62,8 @@ CRemoteClientDlg::CRemoteClientDlg(CWnd* pParent /*=nullptr*/)
 void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 {
 	CDialogEx::DoDataExchange(pDX);
+	DDX_IPAddress(pDX, IDC_IPADDRESS_SERV, m_serv_address);
+	DDX_Text(pDX, IDC_EDIT_PORT, m_nPort);
 }
 
 BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
@@ -101,8 +106,11 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	SetIcon(m_hIcon, FALSE);		// Set small icon
 
 	// TODO: Add extra initialization here
-
-	return TRUE;  // return TRUE  unless you set the focus to a control
+	UpdateData();
+	m_serv_address = 0x0100007F;//192.168.1.100
+	m_nPort = _T("9527");
+	UpdateData(FALSE);
+	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
 void CRemoteClientDlg::OnSysCommand(UINT nID, LPARAM lParam)
@@ -155,14 +163,45 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 }
 
 
+//int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, size_t nLength)
+//
+//{
+//	UpdateData();
+//	CClientSocket* pClient = CClientSocket::GetInstance();
+//	bool ret = pClient->InitSocket(m_server_address, atoi((LPCTSTR)m_nPort));
+//
+//	if (!ret) {
+//		AfxMessageBox("网络初始化失败!");
+//		return -1;
+//	}
+//
+//	CPacket pack(nCmd, pData, nLength);
+//	ret = pClient->Send(pack);
+//	TRACE("Send ret %d\r\n", ret);
+//	int cmd = pClient->DealCommand();
+//	TRACE("ack:%d\r\n", cmd);
+//	if (bAutoClose)
+//		pClient->CloseSocket();
+//	return cmd;
+//
+//}
+
 void CRemoteClientDlg::OnBnClickedBtnTest()
 {
+	UpdateData();
 	CClientSocket* pClient = CClientSocket::GetInstance();
-	bool ret = pClient->InitSocket("127.0.0.1");
-	if (!ret){
-		AfxMessageBox("网络初始化失败！");
+	bool ret = pClient->InitSocket(m_serv_address, atoi((LPCTSTR)m_nPort));
+
+	if (!ret) {
+		AfxMessageBox("网络初始化失败!");
 		return;
 	}
-	CPacket pack;
-	pClient->Send(pack);
+
+	CPacket pack(1981, NULL, 0);
+	ret = pClient->Send(pack);
+	TRACE("Send ret %d\r\n", ret);
+	int cmd = pClient->DealCommand();
+	TRACE("ack:%d\r\n", cmd);
+	pClient->CloseSocket();
 }
+
