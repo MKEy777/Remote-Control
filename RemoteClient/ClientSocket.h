@@ -3,6 +3,8 @@
 #include "pch.h"
 #include "framework.h"
 #include <string>
+#include <vector>
+#include <afxsock.h>
 
 class CPacket {
 public:
@@ -173,31 +175,42 @@ public:
 			TRACE("无法连接到服务器!\n",WSAGetLastError,GetErrInfo(WSAGetLastError()).c_str());
 			return false;	
 		}
+		m_index = 0;
 		return true;
 	}
 	
-#define BUFFER_SIZE 4096
+#define BUFFER_SIZE 2048000
 	int DealCommand() {
 		if (m_sock == -1) return -1;
-		char* buffer = new char[4096];
-		memset(buffer, 0, 4096);
-		int index = 0;//buffer中已接收数据的长度
-		while (true)
-		{
-			int len = recv(m_sock, buffer, BUFFER_SIZE - index, 0);
-			if (len <= 0) return -1;
-			index += len;
-			len = index;
-			m_packet = CPacket((BYTE*)buffer, (size_t&)len);
-			if (len > 0) {
-				memmove(buffer, buffer + len, BUFFER_SIZE - len);//移除已处理的数据
-				index -= len;
-				return m_packet.sCmd;
+		char* buffer = m_buffer.data();
+		if (buffer == NULL) {
+			TRACE("内存不足！\r\n");
+			return -2;
+		}
+		while (true) {
+			int len_received = recv(m_sock, buffer + m_index, BUFFER_SIZE - m_index, 0);
+
+			if (len_received <= 0) {
+				m_index = 0;
+				return -1;
 			}
 
+			// 数据接收正常，累加索引
+			m_index += len_received;
+			size_t parse_len = m_index; 
+			m_packet = CPacket((BYTE*)buffer, parse_len); // CPacket 会修改 parse_len
+
+			if (parse_len > 0) {
+				memmove(buffer, buffer + parse_len, m_index - parse_len);				// memmove(目标, 源, 长度)
+				m_index -= parse_len; // 更新剩余长度
+				return m_packet.sCmd; // 返回命令
+			}
+			if (m_index >= BUFFER_SIZE) {
+				m_index = 0; // 丢弃所有数据
+				return -1;
+			}
 		}
-		delete[] buffer;
-		return 0;
+		return -1;
 	}
 	bool Send(const char* pData, int nSize) {
 		if (m_sock == -1) return false;
@@ -245,24 +258,27 @@ public:
 	}
 
 private:
+	std::vector<char> m_buffer;
+	size_t m_index = 0; // 记录缓冲区当前有效数据长度
 	SOCKET m_sock = INVALID_SOCKET;
 	CPacket m_packet;
 	CClientSocket& operator=(const CClientSocket& ss) {}
 	CClientSocket(const CClientSocket& ss) {};
 	CClientSocket() {
 		if (InitSockEnv() == FALSE) {
-			MessageBoxA(NULL, "Socket环境初始化失败!", "初始化错误", MB_OK | MB_ICONERROR);
+			MessageBoxA(NULL, "无法初始化套接字环境,请检查网络设置", "初始化错误", MB_OK | MB_ICONERROR);
 			exit(0);
 		}
-		m_sock = socket(PF_INET, SOCK_STREAM, 0); // 创建套接字；(地址族，套接字类型，协议)
+		m_buffer.resize(BUFFER_SIZE);
+		m_index = 0;
+		m_sock = INVALID_SOCKET;
 	}
 	~CClientSocket() {
 		closesocket(m_sock);
 		WSACleanup();
 	}
 	bool InitSockEnv() {
-		WSADATA data;
-		if (WSAStartup(MAKEWORD(1, 1), &data) != 0) {
+		if (!AfxSocketInit()) {
 			return FALSE;
 		}
 		return TRUE;

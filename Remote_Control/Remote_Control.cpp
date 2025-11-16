@@ -380,6 +380,14 @@ int UnlockMachine()
 	return 0;
 }
 
+int TestConnect()
+{
+	CPacket pack(1981, NULL, 0);
+	bool ret = CServerSocket::GetInstance()->Send(pack);
+	TRACE("Send ret = %d\r\n", ret);
+	return 0;
+}
+
 int ExcuteCommand(int nCmd) {
 	int ret = 0;
 	switch (nCmd) {
@@ -407,8 +415,9 @@ int ExcuteCommand(int nCmd) {
 	case 8:
 		ret = UnlockMachine();
 		break;
-	default:
-		return -1;
+	case 1981:
+		ret = TestConnect();
+		break;
 	}
 	return ret;
 }
@@ -431,28 +440,30 @@ int main()
 		{	//全局静态变量初始化
 			CServerSocket* pserver = CServerSocket::GetInstance();
 			int count = 0;
-			while (CServerSocket::GetInstance() != nullptr) {
-				if (pserver->InitSocket() == false) {
-					MessageBox(nullptr, L"初始化套接字失败", L"错误", MB_OK | MB_ICONERROR);
-					exit(0);
-				}
+			if (pserver->InitSocket() == false) {
+				MessageBox(NULL, _T("网络初始化异常，未能成功初始hi，请检查网络状态！"), _T("网络初始化失败"), MB_OK | MB_ICONERROR);
+				exit(0);
+			}
+			while (CServerSocket::GetInstance() != NULL) {
 				if (pserver->AcceptClient() == false) {
 					if (count >= 3) {
-						MessageBox(nullptr, L"接受客户端连接失败，程序即将退出", L"错误", MB_OK | MB_ICONERROR);
+						MessageBox(NULL, _T("多次无法正常接入用户，结束程序！"), _T("接入用户失败！"), MB_OK | MB_ICONERROR);
 						exit(0);
 					}
-					MessageBox(nullptr, L"接受客户端连接失败", L"错误", MB_OK | MB_ICONERROR);
+					MessageBox(NULL, _T("无法正常接入用户，自动重试"), _T("接入用户失败！"), MB_OK | MB_ICONERROR);
 					count++;
 				}
+				TRACE("AcceptClient return true\r\n");
 				int ret = pserver->DealCommand();
-				if (ret == 0) {
-					ret=ExcuteCommand(pserver->GetPacket().sCmd);
-					if(ret!= 0) {
-						TRACE("执行命令失败：%d ret=%d\r\n", pserver->GetPacket().sCmd , ret);
+				TRACE("DealCommand ret %d\r\n", ret);
+				if (ret > 0) {
+					ret = ExcuteCommand(ret);
+					if (ret != 0) {
+						TRACE("执行命令失败：%d ret=%d\r\n", pserver->GetPacket().sCmd, ret);
 					}
+					pserver->CloseClient();
+					TRACE("Command has done!\r\n");
 				}
-				pserver->CloseClient();
-				
 			}
 		}
     }else{

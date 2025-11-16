@@ -193,7 +193,7 @@ class CServerSocket//单例模式
 				len = index;
                 m_packet=CPacket((BYTE*)buffer, (size_t&)len);
 				if (len > 0) {
-					memmove(buffer, buffer + len, sizeof(buffer) - len);//移除已处理的数据
+					memmove(buffer, buffer + len, BUFFER_SIZE - len);//移除已处理的数据
 					index -= len;
 					return m_packet.sCmd;
 				}
