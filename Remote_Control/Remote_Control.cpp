@@ -380,7 +380,38 @@ int UnlockMachine()
 	return 0;
 }
 
-
+int ExcuteCommand(int nCmd) {
+	int ret = 0;
+	switch (nCmd) {
+	case 1:
+		ret=MakeDriverInfo();
+		break;
+	case 2:
+		ret = MakeDirectoryInfo();
+		break;
+	case 3:
+		ret = RunFile();
+		break;
+	case 4:
+		ret = DownloadFile();
+		break;
+	case 5:
+		ret = MouseEvent();
+		break;
+	case 6:
+		ret = SendScreen();
+		break;
+	case 7:
+		ret = LockMachine();
+		break;
+	case 8:
+		ret = UnlockMachine();
+		break;
+	default:
+		return -1;
+	}
+	return ret;
+}
 int main()
 {
     int nRetCode = 0;
@@ -396,63 +427,35 @@ int main()
             wprintf(L"错误: MFC 初始化失败\n");
             nRetCode = 1;
         }
-        else
+		else
 		{	//全局静态变量初始化
-			
-			int nCmd = 7;
-			switch (nCmd) {
-				case 1:
-					MakeDriverInfo();
-					break;
-				case 2:
-					MakeDirectoryInfo();
-					break;
-				case 3:
-					RunFile();
-					break;
-				case 4:
-					DownloadFile();
-					break;
-				case 5:
-					MouseEvent();
-					break;
-				case 6:
-					SendScreen();
-					break;
-				case 7:
-					LockMachine();
-					Sleep(50);
-					LockMachine();
-					break;	
-				case 8:
-					UnlockMachine();
-					break;
-			}
-			Sleep(5000);
-			UnlockMachine();
-			return 0;
-			
-			/*CServerSocket* pserver = CServerSocket::GetInstance();
+			CServerSocket* pserver = CServerSocket::GetInstance();
 			int count = 0;
-            while (CServerSocket::GetInstance() != nullptr) {
-                if (pserver->InitSocket() == false) {
-					MessageBox(nullptr, L"初始化套接字失败", L"错误", MB_OK|MB_ICONERROR);
+			while (CServerSocket::GetInstance() != nullptr) {
+				if (pserver->InitSocket() == false) {
+					MessageBox(nullptr, L"初始化套接字失败", L"错误", MB_OK | MB_ICONERROR);
 					exit(0);
-                }
-                if (pserver->AcceptClient() == false) {
-                    if (count >= 3) {
-                        MessageBox(nullptr, L"接受客户端连接失败，程序即将退出", L"错误", MB_OK | MB_ICONERROR);
+				}
+				if (pserver->AcceptClient() == false) {
+					if (count >= 3) {
+						MessageBox(nullptr, L"接受客户端连接失败，程序即将退出", L"错误", MB_OK | MB_ICONERROR);
 						exit(0);
-                    }
-                    MessageBox(nullptr, L"接受客户端连接失败", L"错误", MB_OK | MB_ICONERROR);
+					}
+					MessageBox(nullptr, L"接受客户端连接失败", L"错误", MB_OK | MB_ICONERROR);
 					count++;
-                }
+				}
 				int ret = pserver->DealCommand();
-			}*/
-        }
-    }
-    else
-    {
+				if (ret == 0) {
+					ret=ExcuteCommand(pserver->GetPacket().sCmd);
+					if(ret!= 0) {
+						TRACE("执行命令失败：%d ret=%d\r\n", pserver->GetPacket().sCmd , ret);
+					}
+				}
+				pserver->CloseClient();
+				
+			}
+		}
+    }else{
         // TODO: 更改错误代码以符合需要
         wprintf(L"错误: GetModuleHandle 失败\n");
         nRetCode = 1;

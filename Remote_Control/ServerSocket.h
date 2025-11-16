@@ -254,12 +254,6 @@ class CServerSocket//单例模式
 		CPacket m_packet;
 		CServerSocket& operator=(const CServerSocket& ss) {}
 		CServerSocket(const CServerSocket& ss) {};
-		/*
-		CServerSocket(const CServerSocket& ss){
-			m_sock = ss.m_sock;
-			m_client = ss.m_client;
-		}
-		*/
 		CServerSocket() {
 			if (InitSockEnv() == FALSE) {
 				MessageBoxW(NULL, _T("Socket环境初始化失败!"), _T("初始化错误"), MB_OK | MB_ICONERROR);

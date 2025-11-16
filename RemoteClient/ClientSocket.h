@@ -147,20 +147,7 @@ typedef struct file_info {
 }FILEINFO, * PFILEINFO;
 
 
-std::string GetErrorInfo(int wsaErrcode) {
-	std::string ret;
-	LPVOID lpMsgBuf = NULL;
-	FormatMessage(
-		FORMAT_MESSAGE_ALLOCATE_BUFFER |FORMAT_MESSAGE_FROM_SYSTEM|FORMAT_MESSAGE_IGNORE_INSERTS,
-		NULL,
-		wsaErrcode,
-		MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
-		(LPTSTR)&lpMsgBuf,
-		0, NULL);
-	ret = (char*)lpMsgBuf;
-	LocalFree(lpMsgBuf);	
-	return ret;
-}
+std::string GetErrInfo(int wsaErrcode);
 
 class CClientSocket//单例模式
 {
@@ -183,7 +170,7 @@ public:
 		int ret = connect(m_sock, (sockaddr*)&ser_adr, sizeof(ser_adr)); // 连接服务器；(套接字，地址结构体指针，结构体大小)
 		if (ret == -1) {
 			AfxMessageBox("无法连接到服务器!");
-			TRACE("无法连接到服务器!\n",WSAGetLastError,GetErrorInfo(WSAGetLastError()).c_str());
+			TRACE("无法连接到服务器!\n",WSAGetLastError,GetErrInfo(WSAGetLastError()).c_str());
 			return false;	
 		}
 		return true;
@@ -262,11 +249,6 @@ private:
 	CPacket m_packet;
 	CClientSocket& operator=(const CClientSocket& ss) {}
 	CClientSocket(const CClientSocket& ss) {};
-	/*
-	CClientSocket(const CClientSocket& ss){
-		m_sock = ss.m_sock;
-	}
-	*/
 	CClientSocket() {
 		if (InitSockEnv() == FALSE) {
 			MessageBoxA(NULL, "Socket环境初始化失败!", "初始化错误", MB_OK | MB_ICONERROR);
