@@ -174,6 +174,7 @@ class CServerSocket//单例模式
 			sockaddr_in client_adr;
 			int cli_sz = sizeof(client_adr);
 			m_client = accept(m_sock, (sockaddr*)&client_adr, &cli_sz); // 接受连接；(套接字，地址结构体指针，结构体大小指针)
+			TRACE("客户端已连接");
 			if(m_client == -1) return false;
 
 			return true;
