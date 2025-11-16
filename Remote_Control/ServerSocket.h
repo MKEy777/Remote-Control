@@ -16,8 +16,22 @@ public:
 		return *this;
 	}
 	//数据包封包构造函数，用于把数据封装成数据包
-	CPacket(WORD nCmd,const BYTE* pData, size_t& nSize) {
-		
+	CPacket(WORD nCmd,const BYTE* pData, size_t nSize) {
+		sHead = 0xFEFF;
+		nLength = nSize + 4;
+		sCmd = nCmd;
+		if (nSize > 0) {
+			strData.resize(nSize);
+			memcpy((void*)strData.c_str(), pData, nSize);
+		}
+		else {
+			strData.clear();
+		}
+		sSum = 0;
+		for (size_t j = 0; j < strData.size(); j++)
+		{
+			sSum += BYTE(strData[j]) & 0xFF;
+		}
 	}
 
 	//数据包解包，将包中的数据分配到成员变量中
@@ -85,12 +99,26 @@ public:
 	~CPacket() {
 		
 	}
+
+	int Size() {//包数据的大小
+		return nLength + 6;
+	}
+	const char* Data() {
+		strOut.resize(nLength + 6);
+		BYTE* pData = (BYTE*)strOut.c_str();
+		*(WORD*)pData = sHead; pData += 2;
+		*(DWORD*)(pData) = nLength; pData += 4;
+		*(WORD*)pData = sCmd; pData += 2;
+		memcpy(pData, strData.c_str(), strData.size()); pData += strData.size();
+		*(WORD*)pData = sSum;
+		return strOut.c_str();
+	}
 	WORD sHead;         //包头
 	DWORD nLength;      //包长度,从命令字段到校验码的总长度
 	WORD sCmd;          //命令字
 	std::string strData;//数据
 	WORD sSum;          //校验和
-	
+	std::string strOut;//整个包的数据
 };
 typedef struct MouseEvent{
 	MouseEvent() {
@@ -103,7 +131,18 @@ typedef struct MouseEvent{
 	WORD nButton;//左键、中键、右键
 	POINT ptXY;//坐标
 }MOUSEEV,*PMOUSEEV;
-
+typedef struct file_info {
+	file_info() {
+		IsInvalid = FALSE;
+		IsDirectory = -1;
+		HasNext = TRUE;
+		memset(szFileName, 0, sizeof(szFileName));
+	}
+	BOOL IsInvalid;//是否有效
+	BOOL IsDirectory;//是否为目录 0 否 1 是
+	BOOL HasNext;//是否还有后续 0 没有 1 有
+	char szFileName[256];//文件名
+}FILEINFO, * PFILEINFO;
 
 class CServerSocket//单例模式
 {
@@ -201,6 +240,13 @@ class CServerSocket//单例模式
 				}
 			}
 			return false;
+		}
+		CPacket& GetPacket() {
+			return m_packet;
+		}
+		void CloseClient() {
+			closesocket(m_client);
+			m_client = INVALID_SOCKET;
 		}
 	private:
 		SOCKET m_sock = INVALID_SOCKET;
