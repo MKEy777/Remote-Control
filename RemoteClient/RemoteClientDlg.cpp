@@ -298,16 +298,15 @@ void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
 
 void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 {
-	int ret = SendCommandPacket(1, false);   // 关键：不自动关闭
+	int ret = SendCommandPacket(1, false);
 	if (ret == -1) {
 		AfxMessageBox(_T("命令处理失败!!!"));
 		return;
 	}
 
 	CClientSocket* pClient = CClientSocket::GetInstance();
-	std::string drivers = pClient->GetPacket().strData;  // 第一包
+	std::string drivers = pClient->GetPacket().strData;
 
-	// 继续循环接收剩余包
 	while (true)
 	{
 		int cmd = pClient->DealCommand();
@@ -316,11 +315,12 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 		drivers += pClient->GetPacket().strData;
 	}
 
-	pClient->CloseSocket();  // 手动关闭
+	pClient->CloseSocket();
 
 	// ====== 填充 Tree ======
 	std::string dr;
 	m_Tree.DeleteAllItems();
+
 	for (size_t i = 0; i < drivers.size(); i++)
 	{
 		if (drivers[i] == ',') {
@@ -331,5 +331,12 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 			continue;
 		}
 		dr += drivers[i];
+	}
+
+	// 循环结束后把最后一个也加上去
+	if (!dr.empty()) {
+		dr += ":";
+		HTREEITEM hTemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+		m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 	}
 }

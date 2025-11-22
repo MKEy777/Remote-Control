@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "framework.h"
+#include <vector>
 
 class CPacket {
 public:
@@ -182,24 +183,32 @@ class CServerSocket//单例模式
 #define BUFFER_SIZE 4096
 		int DealCommand() {
 			if (m_client == -1) return -1;
-			char* buffer=new char[4096];
-			memset(buffer, 0, 4096);
-			int index = 0;//buffer中已接收数据的长度
-			while (true)
-			{
-				int len = recv(m_client, buffer, BUFFER_SIZE-index, 0);
-				if (len <= 0) return -1;
-				index += len;
-				len = index;
-                m_packet=CPacket((BYTE*)buffer, (size_t&)len);
-				if (len > 0) {
-					memmove(buffer, buffer + len, BUFFER_SIZE - len);//移除已处理的数据
-					index -= len;
+
+			if (m_buffer.size() < 4096) m_buffer.resize(4096);
+
+			while (true) {
+				size_t parse_len = m_index;
+				m_packet = CPacket((BYTE*)m_buffer.data(), parse_len);
+
+				if (parse_len > 0) {
+					memmove(m_buffer.data(), m_buffer.data() + parse_len, m_index - parse_len);
+					m_index -= parse_len;
 					return m_packet.sCmd;
 				}
 
+				if (m_index >= m_buffer.size()) {
+					m_buffer.resize(m_buffer.size() * 2);
+				}
+
+				int len_received = recv(m_client, m_buffer.data() + m_index, m_buffer.size() - m_index, 0);
+
+				if (len_received <= 0) {
+					return -1;
+				}
+
+				m_index += len_received;
 			}
-			return 0;
+			return -1;
 		}
 		bool Send(const char* pData, int nSize) {
 			if (m_client == -1) return false;
@@ -253,6 +262,8 @@ class CServerSocket//单例模式
 		SOCKET m_sock = INVALID_SOCKET;
 		SOCKET m_client = INVALID_SOCKET;
 		CPacket m_packet;
+		std::vector<char> m_buffer;
+		size_t m_index = 0;
 		CServerSocket& operator=(const CServerSocket& ss) {}
 		CServerSocket(const CServerSocket& ss) {};
 		CServerSocket() {
@@ -261,6 +272,8 @@ class CServerSocket//单例模式
 				exit(0);
 			}
 			m_sock = socket(PF_INET, SOCK_STREAM, 0); // 创建套接字；(地址族，套接字类型，协议)
+			m_buffer.resize(BUFFER_SIZE);
+			m_index = 0;
 		}
 		~CServerSocket() {
 			closesocket(m_sock);

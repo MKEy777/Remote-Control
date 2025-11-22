@@ -34,23 +34,19 @@ void Dump(BYTE* pData, size_t nSize) {//调试输出十六进制数据
 
 //查看本地磁盘分区，并把信息打包成数据包
 int MakeDriverInfo() {
-    std::string result;
-    for (int i = 1; i <= 26; i++)//遍历磁盘符
-    {
-        if (_chdrive(i) == 0)//切换成功，利用切换磁盘分区的方法来遍历磁盘符
-        {
-            if (result.size() > 0)
-                result += ',';
-            result += 'A' + i - 1;//得到盘符
-        }
-    }
+	std::string result;
+	for (int i = 1; i <= 26; i++) {
+		if (_chdrive(i) == 0) {
+			if (result.size() > 0)
+				result += ',';
+			result += 'A' + i - 1;
+		}
+	}
 
-    CPacket pack(1, (BYTE*)result.c_str(), result.size());//打包
-
-    //调试与发送
-    Dump((BYTE*)pack.Data(), pack.Size());
-    CServerSocket::GetInstance()->Send(pack);
-    return 0;
+	CPacket pack(1, (BYTE*)result.c_str(), result.size());
+	Dump((BYTE*)pack.Data(), pack.Size());
+	CServerSocket::GetInstance()->Send(pack);
+	return 0;
 }
 
 int MakeDirectoryInfo() {
@@ -89,6 +85,7 @@ int MakeDirectoryInfo() {
 		count++;
 	} while (!_findnext(hfind, &fdata));
 	TRACE("server: count = %d\r\n", count);
+	_findclose(hfind);
 	//发送信息到控制端
 	FILEINFO finfo;
 	finfo.HasNext = FALSE;
