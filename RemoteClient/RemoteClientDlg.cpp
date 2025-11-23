@@ -68,6 +68,7 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_LIST_FILE, m_List);
 }
 
+#include <atlconv.h>
 void CRemoteClientDlg::LoadFileInfo()
 {
 	CPoint ptMouse;
@@ -319,12 +320,13 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	pClient->CloseSocket();
 	std::string dr;
 	m_Tree.DeleteAllItems();
+	m_List.DeleteAllItems();
 
 	for (size_t i = 0; i < drivers.size(); i++)
 	{
 		if (drivers[i] == ',') {
 			dr += ":";
-			HTREEITEM hTemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			HTREEITEM hTemp = m_Tree.InsertItem(CString(dr.c_str()), TVI_ROOT, TVI_LAST);
 			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 			dr.clear();
 			continue;
@@ -334,7 +336,7 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	// 循环结束后把最后一个也加上去
 	if (!dr.empty()) {
 		dr += ":";
-		HTREEITEM hTemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+		HTREEITEM hTemp = m_Tree.InsertItem(CString(dr.c_str()), TVI_ROOT, TVI_LAST);
 		m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 	}
 }
@@ -355,17 +357,20 @@ void CRemoteClientDlg::OnDownloadFile()
 		HTREEITEM hSelected = m_Tree.GetSelectedItem();//获取树控件选中项
 		strFile = GetPath(hSelected) + strFile;
 		TRACE("Download file:%s\r\n", (LPCTSTR)strFile);
+		CClientSocket* pClient = CClientSocket::GetInstance();
 		int ret = SendCommandPacket(4, false, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());//发送下载文件命令
 		if (ret < 0) {
 			AfxMessageBox("下载文件命令发送失败!");
 			TRACE("执行下载失败：ret = %d\r\n", ret);
+			fclose(pFile);
+			pClient->CloseSocket();
 		}
-		CClientSocket* pClient = CClientSocket::GetInstance();
 		long long nlength = *(long long*)pClient->GetPacket().strData.c_str();
 		if (nlength <= 0)
 		{
 			AfxMessageBox("文件长度为0或无法读取文件");
 			fclose(pFile);
+			pClient->CloseSocket();
 			return;
 		}
 		long long nCount = 0;
@@ -388,10 +393,33 @@ void CRemoteClientDlg::OnDownloadFile()
 
 void CRemoteClientDlg::OnDeleteFile()
 {
-	// TODO: 在此添加命令处理程序代码
+	HTREEITEM hSelected = m_Tree.GetSelectedItem();//获取树控件选中项
+	int nSelected = m_List.GetSelectionMark();//获取列表控件选中项索引
+	CString strFile = m_List.GetItemText(nSelected, 0);//文件名
+	CString strPath = GetPath(hSelected) + strFile;
+	int ret = SendCommandPacket(9, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength() * sizeof(TCHAR));
+	if (ret < 0)
+	{
+		AfxMessageBox("打开文件命令失败!");
+		TRACE("运行文件命令发送失败:ret=%d\r\n", ret);
+		return;
+	}
+	m_List.DeleteItem(nSelected);
+	return;
 }
 
 void CRemoteClientDlg::OnRunFile()
 {
-	// TODO: 在此添加命令处理程序代码
+	HTREEITEM hSelected = m_Tree.GetSelectedItem();//获取树控件选中项
+	CString strFile = m_List.GetItemText(m_List.GetSelectionMark(), 0);//文件名
+	CString strPath = GetPath(hSelected) + strFile;
+	int nSelected = m_List.GetSelectionMark();//获取列表控件选中项索引
+	int ret = SendCommandPacket(3, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	if(ret<0)
+	{
+		AfxMessageBox("打开文件命令失败!");
+		TRACE("运行文件命令发送失败:ret=%d\r\n", ret);
+		return;
+	}
+	return;
 }

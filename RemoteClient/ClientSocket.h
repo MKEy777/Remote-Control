@@ -191,27 +191,32 @@ public:
 			return -2;
 		}
 		while (true) {
-			int len_received = recv(m_sock, buffer + m_index, BUFFER_SIZE - m_index, 0);
-
-			if (len_received <= 0) {
-				m_index = 0;
-				return -1;
-			}
-
-			// 数据接收正常，累加索引
-			m_index += len_received;
-			size_t parse_len = m_index; 
-			m_packet = CPacket((BYTE*)buffer, parse_len); // CPacket 会修改 parse_len
+			// 先看看缓冲区里现有的数据够不够拼成一个包
+			size_t parse_len = m_index;// 把当前缓冲区数据长度传进去
+			m_packet = CPacket((BYTE*)buffer, parse_len);
 
 			if (parse_len > 0) {
-				memmove(buffer, buffer + parse_len, m_index - parse_len);				// memmove(目标, 源, 长度)
-				m_index -= parse_len; // 更新剩余长度
-				return m_packet.sCmd; // 返回命令
+				// 发现完整包，处理掉，把剩下的移到前面
+				memmove(buffer, buffer + parse_len, m_index - parse_len);
+				m_index -= parse_len;
+				return m_packet.sCmd;
 			}
-			if (m_index >= BUFFER_SIZE) {
-				m_index = 0; // 丢弃所有数据
+
+			// 缓冲区数据不够，继续接收
+			if (m_index >= m_buffer.size()) {
+				size_t new_size = m_buffer.size() * 2;
+				// 可以在这里加个上限，防止恶意攻击撑爆内存
+				if (new_size > 1024 * 1024 * 50) return -1;
+				m_buffer.resize(new_size);
+				buffer = m_buffer.data();
+			}
+
+			int len_received = recv(m_sock, buffer + m_index, BUFFER_SIZE - m_index, 0);
+			if (len_received <= 0) {
+				// 只有当真正断开或出错时才复位
 				return -1;
 			}
+			m_index += len_received;
 		}
 		return -1;
 	}
