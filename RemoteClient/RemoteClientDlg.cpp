@@ -68,7 +68,6 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_LIST_FILE, m_List);
 }
 
-#include <atlconv.h>
 void CRemoteClientDlg::LoadFileInfo()
 {
 	CPoint ptMouse;
@@ -87,26 +86,25 @@ void CRemoteClientDlg::LoadFileInfo()
 	CClientSocket* pClient = CClientSocket::GetInstance();
 	int Count = 0;
 	while (pInfo->HasNext) {
-		TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+		//TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
 		if (pInfo->IsDirectory) {
 			if (CString(pInfo->szFileName) == "." || (CString(pInfo->szFileName) == ".."))
 			{
 				int cmd = pClient->DealCommand();
-				TRACE("ack:%d\r\n", cmd);
-				if (cmd < 0)break;
+				if (cmd < 0) break;
 				pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
 				continue;
 			}
 			HTREEITEM hTemp = m_Tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
-			m_Tree.InsertItem("", hTemp, TVI_LAST);
+			m_Tree.InsertItem(_T(""), hTemp, TVI_LAST);
 		}
 		else {
 			m_List.InsertItem(0, pInfo->szFileName);
 		}
+
 		Count++;
 		int cmd = pClient->DealCommand();
-		//TRACE("ack:%d\r\n", cmd);
-		if (cmd < 0)break;
+		if (cmd < 0) break;
 		pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
 	}
 	pClient->CloseSocket();
@@ -245,7 +243,7 @@ int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, 
 	bool ret = pClient->InitSocket(m_serv_address, atoi((LPCTSTR)m_nPort));
 
 	if (!ret) {
-		AfxMessageBox("网络初始化失败!");
+		AfxMessageBox(_T("网络初始化失败!"));
 		return -1;
 	}
 
@@ -326,7 +324,7 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	{
 		if (drivers[i] == ',') {
 			dr += ":";
-			HTREEITEM hTemp = m_Tree.InsertItem(CString(dr.c_str()), TVI_ROOT, TVI_LAST);
+			HTREEITEM hTemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
 			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 			dr.clear();
 			continue;
@@ -336,7 +334,7 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 	// 循环结束后把最后一个也加上去
 	if (!dr.empty()) {
 		dr += ":";
-		HTREEITEM hTemp = m_Tree.InsertItem(CString(dr.c_str()), TVI_ROOT, TVI_LAST);
+		HTREEITEM hTemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
 		m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 	}
 }
@@ -358,9 +356,9 @@ void CRemoteClientDlg::OnDownloadFile()
 		strFile = GetPath(hSelected) + strFile;
 		TRACE("Download file:%s\r\n", (LPCTSTR)strFile);
 		CClientSocket* pClient = CClientSocket::GetInstance();
-		int ret = SendCommandPacket(4, false, (BYTE*)(LPCTSTR)strFile, strFile.GetLength());//发送下载文件命令
+		int ret = SendCommandPacket(4, false, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
 		if (ret < 0) {
-			AfxMessageBox("下载文件命令发送失败!");
+			AfxMessageBox(_T("下载文件命令发送失败!"));
 			TRACE("执行下载失败：ret = %d\r\n", ret);
 			fclose(pFile);
 			pClient->CloseSocket();
@@ -368,7 +366,7 @@ void CRemoteClientDlg::OnDownloadFile()
 		long long nlength = *(long long*)pClient->GetPacket().strData.c_str();
 		if (nlength <= 0)
 		{
-			AfxMessageBox("文件长度为0或无法读取文件");
+			AfxMessageBox(_T("文件长度为0或无法读取文件"));
 			fclose(pFile);
 			pClient->CloseSocket();
 			return;
@@ -379,7 +377,7 @@ void CRemoteClientDlg::OnDownloadFile()
 			ret = pClient->DealCommand();
 			if (ret < 0)
 			{
-				AfxMessageBox("下载文件过程中出现错误!");
+				AfxMessageBox(_T("下载文件过程中出现错误!"));
 				TRACE("下载文件过程中出现错误:ret=%d\r\n", ret);
 				break;
 			}
@@ -397,10 +395,10 @@ void CRemoteClientDlg::OnDeleteFile()
 	int nSelected = m_List.GetSelectionMark();//获取列表控件选中项索引
 	CString strFile = m_List.GetItemText(nSelected, 0);//文件名
 	CString strPath = GetPath(hSelected) + strFile;
-	int ret = SendCommandPacket(9, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength() * sizeof(TCHAR));
+	int ret = SendCommandPacket(9, false, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
 	if (ret < 0)
 	{
-		AfxMessageBox("打开文件命令失败!");
+		AfxMessageBox(_T("打开文件命令失败!"));
 		TRACE("运行文件命令发送失败:ret=%d\r\n", ret);
 		return;
 	}
@@ -414,10 +412,10 @@ void CRemoteClientDlg::OnRunFile()
 	CString strFile = m_List.GetItemText(m_List.GetSelectionMark(), 0);//文件名
 	CString strPath = GetPath(hSelected) + strFile;
 	int nSelected = m_List.GetSelectionMark();//获取列表控件选中项索引
-	int ret = SendCommandPacket(3, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	int ret = SendCommandPacket(3, false, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
 	if(ret<0)
 	{
-		AfxMessageBox("打开文件命令失败!");
+		AfxMessageBox(_T("打开文件命令失败!"));
 		TRACE("运行文件命令发送失败:ret=%d\r\n", ret);
 		return;
 	}

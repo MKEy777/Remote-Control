@@ -173,7 +173,7 @@ public:
 
 		int ret = connect(m_sock, (sockaddr*)&ser_adr, sizeof(ser_adr)); // 连接服务器；(套接字，地址结构体指针，结构体大小)
 		if (ret == -1) {
-			AfxMessageBox("无法连接到服务器!");
+			AfxMessageBox(_T("无法连接到服务器!"));
 			TRACE("无法连接到服务器!\n",WSAGetLastError,GetErrInfo(WSAGetLastError()).c_str());
 			return false;	
 		}
