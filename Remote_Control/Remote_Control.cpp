@@ -49,6 +49,7 @@ int MakeDriverInfo() {
 	return 0;
 }
 
+//发送指定目录的文件信息
 int MakeDirectoryInfo() {
 	std::string strPath;
 	//std::list<FILEINFO> lstFileInfos;
@@ -94,6 +95,7 @@ int MakeDirectoryInfo() {
 	return 0;
 }
 
+//运行指定的文件
 int RunFile() {
 	std::string strPath;
 	CServerSocket::GetInstance()->GetFilePath(strPath);
@@ -102,6 +104,8 @@ int RunFile() {
 	CServerSocket::GetInstance()->Send(pack);
 	return 0;
 }
+
+//下载指定的文件
 #pragma warning(disable:4966) // fopen sprintf strcpy strstr 
 int DownloadFile() {
 	std::string strPath;
@@ -116,7 +120,7 @@ int DownloadFile() {
 	}
 	if (pFile != NULL) {
 		fseek(pFile, 0, SEEK_END);
-		data = _ftelli64(pFile);
+		data = _ftelli64(pFile);//获取文件大小
 		CPacket head(4, (BYTE*)&data, 8);
 		CServerSocket::GetInstance()->Send(head);
 		fseek(pFile, 0, SEEK_SET);
@@ -134,6 +138,7 @@ int DownloadFile() {
 	return 0;
 }
 
+//处理鼠标事件
 int MouseEvent()
 {
 	MOUSEEV mouse;
@@ -227,6 +232,8 @@ int MouseEvent()
 	return 0;
 }
 
+
+//发送屏幕截图
 #include <atlimage.h>
 int SendScreen()
 {

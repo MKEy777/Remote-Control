@@ -58,4 +58,7 @@ public:
 	CListCtrl m_List;
 	
 	afx_msg void OnBnClickedBtnFileinfo();
+	afx_msg void OnDownloadFile();
+	afx_msg void OnDeleteFile();
+	afx_msg void OnRunFile();
 };
