@@ -34,25 +34,22 @@ void Dump(BYTE* pData, size_t nSize) {//调试输出十六进制数据
 
 //查看本地磁盘分区，并把信息打包成数据包
 int MakeDriverInfo() {
-    std::string result;
-    for (int i = 1; i <= 26; i++)//遍历磁盘符
-    {
-        if (_chdrive(i) == 0)//切换成功，利用切换磁盘分区的方法来遍历磁盘符
-        {
-            if (result.size() > 0)
-                result += ',';
-            result += 'A' + i - 1;//得到盘符
-        }
-    }
+	std::string result;
+	for (int i = 1; i <= 26; i++) {
+		if (_chdrive(i) == 0) {
+			if (result.size() > 0)
+				result += ',';
+			result += 'A' + i - 1;
+		}
+	}
 
-    CPacket pack(1, (BYTE*)result.c_str(), result.size());//打包
-
-    //调试与发送
-    Dump((BYTE*)pack.Data(), pack.Size());
-    CServerSocket::GetInstance()->Send(pack);
-    return 0;
+	CPacket pack(1, (BYTE*)result.c_str(), result.size());
+	Dump((BYTE*)pack.Data(), pack.Size());
+	CServerSocket::GetInstance()->Send(pack);
+	return 0;
 }
 
+//发送指定目录的文件信息
 int MakeDirectoryInfo() {
 	std::string strPath;
 	//std::list<FILEINFO> lstFileInfos;
@@ -89,6 +86,7 @@ int MakeDirectoryInfo() {
 		count++;
 	} while (!_findnext(hfind, &fdata));
 	TRACE("server: count = %d\r\n", count);
+	_findclose(hfind);
 	//发送信息到控制端
 	FILEINFO finfo;
 	finfo.HasNext = FALSE;
@@ -97,6 +95,7 @@ int MakeDirectoryInfo() {
 	return 0;
 }
 
+//运行指定的文件
 int RunFile() {
 	std::string strPath;
 	CServerSocket::GetInstance()->GetFilePath(strPath);
@@ -105,6 +104,8 @@ int RunFile() {
 	CServerSocket::GetInstance()->Send(pack);
 	return 0;
 }
+
+//下载指定的文件
 #pragma warning(disable:4966) // fopen sprintf strcpy strstr 
 int DownloadFile() {
 	std::string strPath;
@@ -119,7 +120,7 @@ int DownloadFile() {
 	}
 	if (pFile != NULL) {
 		fseek(pFile, 0, SEEK_END);
-		data = _ftelli64(pFile);
+		data = _ftelli64(pFile);//获取文件大小
 		CPacket head(4, (BYTE*)&data, 8);
 		CServerSocket::GetInstance()->Send(head);
 		fseek(pFile, 0, SEEK_SET);
@@ -137,6 +138,7 @@ int DownloadFile() {
 	return 0;
 }
 
+//处理鼠标事件
 int MouseEvent()
 {
 	MOUSEEV mouse;
@@ -230,6 +232,8 @@ int MouseEvent()
 	return 0;
 }
 
+
+//发送屏幕截图
 #include <atlimage.h>
 int SendScreen()
 {
@@ -380,7 +384,47 @@ int UnlockMachine()
 	return 0;
 }
 
+int TestConnect()
+{
+	CPacket pack(1981, NULL, 0);
+	bool ret = CServerSocket::GetInstance()->Send(pack);
+	TRACE("Send ret = %d\r\n", ret);
+	return 0;
+}
 
+int ExcuteCommand(int nCmd) {
+	int ret = 0;
+	switch (nCmd) {
+	case 1:
+		ret=MakeDriverInfo();
+		break;
+	case 2:
+		ret = MakeDirectoryInfo();
+		break;
+	case 3:
+		ret = RunFile();
+		break;
+	case 4:
+		ret = DownloadFile();
+		break;
+	case 5:
+		ret = MouseEvent();
+		break;
+	case 6:
+		ret = SendScreen();
+		break;
+	case 7:
+		ret = LockMachine();
+		break;
+	case 8:
+		ret = UnlockMachine();
+		break;
+	case 1981:
+		ret = TestConnect();
+		break;
+	}
+	return ret;
+}
 int main()
 {
     int nRetCode = 0;
@@ -396,63 +440,37 @@ int main()
             wprintf(L"错误: MFC 初始化失败\n");
             nRetCode = 1;
         }
-        else
+		else
 		{	//全局静态变量初始化
-			
-			int nCmd = 7;
-			switch (nCmd) {
-				case 1:
-					MakeDriverInfo();
-					break;
-				case 2:
-					MakeDirectoryInfo();
-					break;
-				case 3:
-					RunFile();
-					break;
-				case 4:
-					DownloadFile();
-					break;
-				case 5:
-					MouseEvent();
-					break;
-				case 6:
-					SendScreen();
-					break;
-				case 7:
-					LockMachine();
-					Sleep(50);
-					LockMachine();
-					break;	
-				case 8:
-					UnlockMachine();
-					break;
-			}
-			Sleep(5000);
-			UnlockMachine();
-			return 0;
-			
-			/*CServerSocket* pserver = CServerSocket::GetInstance();
+			CServerSocket* pserver = CServerSocket::GetInstance();
 			int count = 0;
-            while (CServerSocket::GetInstance() != nullptr) {
-                if (pserver->InitSocket() == false) {
-					MessageBox(nullptr, L"初始化套接字失败", L"错误", MB_OK|MB_ICONERROR);
-					exit(0);
-                }
-                if (pserver->AcceptClient() == false) {
-                    if (count >= 3) {
-                        MessageBox(nullptr, L"接受客户端连接失败，程序即将退出", L"错误", MB_OK | MB_ICONERROR);
+			if (pserver->InitSocket() == false) {
+				MessageBox(NULL, _T("网络初始化异常，未能成功初始hi，请检查网络状态！"), _T("网络初始化失败"), MB_OK | MB_ICONERROR);
+				exit(0);
+			}
+			while (CServerSocket::GetInstance() != NULL) {
+				if (pserver->AcceptClient() == false) {
+					if (count >= 3) {
+						MessageBox(NULL, _T("多次无法正常接入用户，结束程序！"), _T("接入用户失败！"), MB_OK | MB_ICONERROR);
 						exit(0);
-                    }
-                    MessageBox(nullptr, L"接受客户端连接失败", L"错误", MB_OK | MB_ICONERROR);
+					}
+					MessageBox(NULL, _T("无法正常接入用户，自动重试"), _T("接入用户失败！"), MB_OK | MB_ICONERROR);
 					count++;
-                }
+				}
+				TRACE("AcceptClient return true\r\n");
 				int ret = pserver->DealCommand();
-			}*/
-        }
-    }
-    else
-    {
+				TRACE("DealCommand ret %d\r\n", ret);
+				if (ret > 0) {
+					ret = ExcuteCommand(ret);
+					if (ret != 0) {
+						TRACE("执行命令失败：%d ret=%d\r\n", pserver->GetPacket().sCmd, ret);
+					}
+					pserver->CloseClient();
+					TRACE("Command has done!\r\n");
+				}
+			}
+		}
+    }else{
         // TODO: 更改错误代码以符合需要
         wprintf(L"错误: GetModuleHandle 失败\n");
         nRetCode = 1;

@@ -1,6 +1,7 @@
 #pragma once
 #include "pch.h"
 #include "framework.h"
+#include <vector>
 
 class CPacket {
 public:
@@ -22,7 +23,7 @@ public:
 		sCmd = nCmd;
 		if (nSize > 0) {
 			strData.resize(nSize);
-			memcpy((void*)strData.c_str(), pData, nSize);
+			memcpy((void*)&strData[0], pData, nSize);
 		}
 		else {
 			strData.clear();
@@ -105,7 +106,7 @@ public:
 	}
 	const char* Data() {
 		strOut.resize(nLength + 6);
-		BYTE* pData = (BYTE*)strOut.c_str();
+		BYTE* pData = (BYTE*)&strOut[0];
 		*(WORD*)pData = sHead; pData += 2;
 		*(DWORD*)(pData) = nLength; pData += 4;
 		*(WORD*)pData = sCmd; pData += 2;
@@ -174,6 +175,7 @@ class CServerSocket//单例模式
 			sockaddr_in client_adr;
 			int cli_sz = sizeof(client_adr);
 			m_client = accept(m_sock, (sockaddr*)&client_adr, &cli_sz); // 接受连接；(套接字，地址结构体指针，结构体大小指针)
+			TRACE("客户端已连接\n");
 			if(m_client == -1) return false;
 
 			return true;
@@ -181,24 +183,32 @@ class CServerSocket//单例模式
 #define BUFFER_SIZE 4096
 		int DealCommand() {
 			if (m_client == -1) return -1;
-			char* buffer=new char[4096];
-			memset(buffer, 0, 4096);
-			int index = 0;//buffer中已接收数据的长度
-			while (true)
-			{
-				int len = recv(m_client, buffer, BUFFER_SIZE-index, 0);
-				if (len <= 0) return -1;
-				index += len;
-				len = index;
-                m_packet=CPacket((BYTE*)buffer, (size_t&)len);
-				if (len > 0) {
-					memmove(buffer, buffer + len, sizeof(buffer) - len);//移除已处理的数据
-					index -= len;
+
+			if (m_buffer.size() < 4096) m_buffer.resize(4096);
+
+			while (true) {
+				size_t parse_len = m_index;
+				m_packet = CPacket((BYTE*)m_buffer.data(), parse_len);
+
+				if (parse_len > 0) {
+					memmove(m_buffer.data(), m_buffer.data() + parse_len, m_index - parse_len);
+					m_index -= parse_len;
 					return m_packet.sCmd;
 				}
 
+				if (m_index >= m_buffer.size()) {
+					m_buffer.resize(m_buffer.size() * 2);
+				}
+
+				int len_received = recv(m_client, m_buffer.data() + m_index, m_buffer.size() - m_index, 0);
+
+				if (len_received <= 0) {
+					return -1;
+				}
+
+				m_index += len_received;
 			}
-			return 0;
+			return -1;
 		}
 		bool Send(const char* pData, int nSize) {
 			if (m_client == -1) return false;
@@ -252,20 +262,18 @@ class CServerSocket//单例模式
 		SOCKET m_sock = INVALID_SOCKET;
 		SOCKET m_client = INVALID_SOCKET;
 		CPacket m_packet;
+		std::vector<char> m_buffer;
+		size_t m_index = 0;
 		CServerSocket& operator=(const CServerSocket& ss) {}
 		CServerSocket(const CServerSocket& ss) {};
-		/*
-		CServerSocket(const CServerSocket& ss){
-			m_sock = ss.m_sock;
-			m_client = ss.m_client;
-		}
-		*/
 		CServerSocket() {
 			if (InitSockEnv() == FALSE) {
 				MessageBoxW(NULL, _T("Socket环境初始化失败!"), _T("初始化错误"), MB_OK | MB_ICONERROR);
 				exit(0);
 			}
 			m_sock = socket(PF_INET, SOCK_STREAM, 0); // 创建套接字；(地址族，套接字类型，协议)
+			m_buffer.resize(BUFFER_SIZE);
+			m_index = 0;
 		}
 		~CServerSocket() {
 			closesocket(m_sock);
