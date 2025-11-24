@@ -101,35 +101,34 @@ void CRemoteClientDlg::threadWatchData()
 	do {
 		pClient = CClientSocket::GetInstance();
 	} while (pClient==NULL);
+	ULONGLONG tick = GetTickCount64();
 	for (;;) {
-		CPacket pack(6, NULL, 0);
-		bool ret = pClient->Send(pack);
-		if (ret) {
-			int cmd = pClient->DealCommand();//拿数据
-			if (cmd == 6) {
-				if (m_isFull == false) {
-					BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
-					//存入CImage
-					HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);//创建一个全局内存块
-					if (hMem == NULL) {
-						TRACE("GlobalAlloc failed\r\n");
-						Sleep(10);
-						continue;
-					}
-					IStream* pStream = NULL;
-					HRESULT hRet=CreateStreamOnHGlobal(hMem, TRUE, &pStream);//把全局内存包装成一个 COM 流 (IStream)
-					if (hRet == S_OK) {
-						ULONG length = 0;//写入流的字节数
-						pStream->Write(pData, (ULONG)pClient->GetPacket().strData.size(), &length);//把数据写入流
-						LARGE_INTEGER bg = { 0 };
-						pStream->Seek(bg, STREAM_SEEK_SET, NULL);//把流的指针移到开头
-						m_image.Load(pStream);//从流中加载图像数据
-						m_isFull = true;
-					}
-					
+		if (GetTickCount64() - tick < 50)//控制每50ms请求一次截图
+		{
+			Sleep(GetTickCount64() - tick);
+		}
+		int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);//发送请求截图命令，使用消息发送方式
+		if (ret==6) {
+			if (m_isFull == false) {
+				BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
+				//存入CImage
+				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);//创建一个全局内存块
+				if (hMem == NULL) {
+					TRACE("GlobalAlloc failed\r\n");
+					Sleep(10);
+					continue;
+				}
+				IStream* pStream = NULL;
+				HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);//把全局内存包装成一个 COM 流 (IStream)
+				if (hRet == S_OK) {
+					ULONG length = 0;//写入流的字节数
+					pStream->Write(pData, (ULONG)pClient->GetPacket().strData.size(), &length);//把数据写入流
+					LARGE_INTEGER bg = { 0 };
+					pStream->Seek(bg, STREAM_SEEK_SET, NULL);//把流的指针移到开头
+					m_image.Load(pStream);//从流中加载图像数据
+					m_isFull = true;
 				}
 			}
-
 		}
 		else {
 			Sleep(10);	
@@ -554,6 +553,8 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 	}
 		  break;
 	case 6:
+		ret = SendCommandPacket(cmd, wParam & 1,NULL,0);
+		break;
 	case 7:
 	case 8: {
 		ret = SendCommandPacket(cmd, wParam & 1);
@@ -568,8 +569,8 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
+	CWatchDialog dlg(this);//创建观看对话框
 	_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
 	//GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);//禁用按钮
-	CWatchDialog dlg(this);//创建观看对话框
 	dlg.DoModal();//模态对话框
 }

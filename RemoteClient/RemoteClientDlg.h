@@ -25,6 +25,7 @@ public:
 
 public:
 	bool isFull() const { return m_isFull; }
+	void SetImageStatus(bool isFull=false) { m_isFull = isFull; }
 	CImage& getImage() { return m_image; }
 private:
 	CImage m_image;//»º´æÆÁÄ»Í¼Ïñ

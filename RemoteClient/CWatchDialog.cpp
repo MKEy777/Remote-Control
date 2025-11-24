@@ -25,6 +25,7 @@ CWatchDialog::~CWatchDialog()
 void CWatchDialog::DoDataExchange(CDataExchange* pDX)
 {
 	CDialog::DoDataExchange(pDX);
+	DDX_Control(pDX, IDC_WATCH, m_picture);
 }
 
 
@@ -55,15 +56,18 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 		CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();//获取父窗口指针
 		if(pParent->isFull())
 		{
-			CImage& img = pParent->getImage();
-			HDC hdc = ::GetDC(m_hWnd);
-			HDC memDC = ::CreateCompatibleDC(hdc);
-			HBITMAP hBitmap = (HBITMAP)img;
-			HBITMAP oldBitmap = (HBITMAP)::SelectObject(memDC, hBitmap);
-			::BitBlt(hdc, 0, 0, img.GetWidth(), img.GetHeight(), memDC, 0, 0, SRCCOPY);
-			::SelectObject(memDC, oldBitmap);
-			::DeleteDC(memDC);
-			::ReleaseDC(m_hWnd, hdc);
+			CRect rect;
+			m_picture.GetWindowRect(rect);//获取静态控件的矩形区域
+			CImage& img = pParent->getImage();//获取图像引用
+			HDC hdc = m_picture.GetDC()->GetSafeHdc();
+	
+			img.StretchBlt(hdc, 0, 0, rect.Width(), rect.Height(),SRCCOPY);//绘制图像
+			m_picture.InvalidateRect(NULL);//使静态控件无效，准备重绘
+			//img.BitBlt(hdc, 0, 0, SRCCOPY);//绘制图像
+			img.Destroy();
+			pParent->SetImageStatus(false);
+			
+		
 		}
 	}
 	CDialog::OnTimer(nIDEvent);
