@@ -242,19 +242,32 @@ int SendScreen()
 	int nBitPerPixel = GetDeviceCaps(hScreen, BITSPIXEL);//24   ARGB8888 32bit RGB888 24bit RGB565  RGB444
 	int nWidth = GetDeviceCaps(hScreen, HORZRES);
 	int nHeight = GetDeviceCaps(hScreen, VERTRES);
-	screen.Create(nWidth, nHeight, nBitPerPixel);
-	BitBlt(screen.GetDC(), 0, 0, nWidth, nHeight, hScreen, 0, 0, SRCCOPY);//把屏幕内容复制到 CImage 对象内部的 DC
+
+	// --- 增加缩放逻辑，限制最大宽度为 1920 ---
+	int nDestWidth = nWidth;
+	int nDestHeight = nHeight;
+	if (nWidth > 1920) {
+		nDestWidth = 1920;
+		nDestHeight = nHeight * 1920 / nWidth;
+	}
+
+	screen.Create(nDestWidth, nDestHeight, nBitPerPixel);
+
+	HDC hDestDC = screen.GetDC();
+	SetStretchBltMode(hDestDC, HALFTONE); // 设置缩放模式，防止画质劣化
+	StretchBlt(hDestDC, 0, 0, nDestWidth, nDestHeight, hScreen, 0, 0, nWidth, nHeight, SRCCOPY);//把屏幕内容复制到 CImage 对象内部的 DC
+
 	ReleaseDC(NULL, hScreen);
 	HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);//分配一个可移动的全局内存块
 	if (hMem == NULL)return -1;
 	IStream* pStream = NULL;
 	HRESULT ret = CreateStreamOnHGlobal(hMem, TRUE, &pStream);//把全局内存包装成一个 COM 流 (IStream)
 	if (ret == S_OK) {
-		screen.Save(pStream, Gdiplus::ImageFormatPNG);//把 CImage 以 PNG 格式写入这块内存
+		screen.Save(pStream, Gdiplus::ImageFormatPNG);//把 CImage 以 JPEG 格式写入这块内存
 		LARGE_INTEGER bg = { 0 };
 		pStream->Seek(bg, STREAM_SEEK_SET, NULL);
 		PBYTE pData = (PBYTE)GlobalLock(hMem);//获取指针
-		SIZE_T nSize = GlobalSize(hMem);//获取 PNG 数据大小
+		SIZE_T nSize = GlobalSize(hMem);//获取 JPEG 数据大小
 		CPacket pack(6, pData, nSize);
 		CServerSocket::GetInstance()->Send(pack);
 		GlobalUnlock(hMem);

@@ -62,7 +62,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			HDC hdc = m_picture.GetDC()->GetSafeHdc();
 	
 			img.StretchBlt(hdc, 0, 0, rect.Width(), rect.Height(),SRCCOPY);//绘制图像
-			m_picture.InvalidateRect(NULL);//使静态控件无效，准备重绘
+			//m_picture.InvalidateRect(NULL);//使静态控件无效，准备重绘
 			//img.BitBlt(hdc, 0, 0, SRCCOPY);//绘制图像
 			img.Destroy();
 			pParent->SetImageStatus(false);
