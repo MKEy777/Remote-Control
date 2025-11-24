@@ -10,36 +10,6 @@
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
-CStringW GBKToUnicode(const char* szGBK)
-{
-	// 1. 获取转换后的长度，强制使用代码页 936 (GBK)
-	int len = MultiByteToWideChar(936, 0, szGBK, -1, NULL, 0);
-	if (len <= 0) return L"";
-
-	// 2. 分配宽字符内存
-	wchar_t* wstr = new wchar_t[len];
-
-	// 3. 执行转换
-	MultiByteToWideChar(936, 0, szGBK, -1, wstr, len);
-
-	// 4. 封装成 CStringW
-	CStringW strResult(wstr);
-	delete[] wstr;
-
-	return strResult;
-}
-
-void DumpDebug(const char* label, const char* pData, size_t nSize) {
-	CString strOut;
-	strOut.Format(_T("[%s] Hex: "), CString(label));
-	for (size_t i = 0; i < nSize && i < 32; i++) { // 只打印前32字节防止太长
-		CString tmp;
-		tmp.Format(_T("%02X "), (unsigned char)pData[i]);
-		strOut += tmp;
-	}
-	strOut += _T("\r\n");
-	OutputDebugString(strOut);
-}
 
 
 // CAboutDlg dialog used for App About
@@ -115,6 +85,39 @@ void CRemoteClientDlg::LoadFileCurrent()
 		pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
 	}
 	pClient->CloseSocket();
+}
+
+void CRemoteClientDlg::threadEntryForWatch(void* arg)
+{
+	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
+	thiz->threadWatchData();
+	_endthread();
+}
+
+void CRemoteClientDlg::threadWatchData()
+{
+	CClientSocket* pClient = NULL;
+	do {
+		pClient = CClientSocket::GetInstance();
+	} while (pClient==NULL);
+	for (;;) {
+		CPacket pack(6, NULL, 0);
+		bool ret = pClient->Send(pack);
+		if (ret) {
+			int cmd = pClient->DealCommand();//拿数据
+			if (cmd == 6) {
+				if (m_isFull == false) {
+					BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();//TODO
+					m_isFull = true;
+				}
+			}
+
+		}
+		else {
+			Sleep(10);	
+		}
+		
+	}
 }
 
 void CRemoteClientDlg::threadEntryForDownFile(void* arg)
@@ -380,26 +383,26 @@ int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, 
 	return cmd;
 }
 
+
 void CRemoteClientDlg::OnBnClickedBtnTest()
 {
 	SendCommandPacket(1981);
 }
 
-
-
-
+// 树控件单击事件
 void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	*pResult = 0;
 	LoadFileInfo();
 }
-
+// 树控件双击事件
 void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	*pResult = 0;
 	LoadFileInfo();
 }
 
+// 列表控件右键事件
 void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
@@ -419,6 +422,7 @@ void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
 	}
 }
 
+// 点击按钮查看磁盘分区
 void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 {
 	int ret = SendCommandPacket(1, false);
@@ -461,6 +465,8 @@ void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 		m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
 	}
 }
+
+//下载文件
 void CRemoteClientDlg::OnDownloadFile()
 {
 	//添加线程函数
@@ -474,6 +480,7 @@ void CRemoteClientDlg::OnDownloadFile()
 	
 }
 
+//删除文件
 void CRemoteClientDlg::OnDeleteFile()
 {
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();//获取树控件选中项
@@ -491,6 +498,7 @@ void CRemoteClientDlg::OnDeleteFile()
 	return;
 }
 
+//运行文件
 void CRemoteClientDlg::OnRunFile()
 {
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();//获取树控件选中项
@@ -507,6 +515,7 @@ void CRemoteClientDlg::OnRunFile()
 	return;
 }
 
+//消息响应函数
 LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 {//实现消息响应函数④
 	/*

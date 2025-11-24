@@ -259,7 +259,12 @@ int SendScreen()
 		CServerSocket::GetInstance()->Send(pack);
 		GlobalUnlock(hMem);
 	}
-	/*screen.Save(_T("test2020.png"), Gdiplus::ImageFormatPNG);
+	pStream->Release();
+	GlobalFree(hMem);
+	screen.ReleaseDC();
+	return 0;
+}
+/*screen.Save(_T("test2020.png"), Gdiplus::ImageFormatPNG);
 	//TRACE("png %d\r\n", GetTickCount64() - tick);
 	for (int i = 0; i < 10; i++) {
 		DWORD tick = GetTickCount64();
@@ -269,11 +274,6 @@ int SendScreen()
 		screen.Save(_T("test2020.jpg"), Gdiplus::ImageFormatJPEG);
 		TRACE("jpg %d\r\n", GetTickCount64() - tick) ;
 	}*/
-	pStream->Release();
-	GlobalFree(hMem);
-	screen.ReleaseDC();
-	return 0;
-}
 
 #include "LockDialog.h"
 #include <process.h>
@@ -405,7 +405,6 @@ int DeleteLocalFile() {
 	bool ret=CServerSocket::GetInstance()->Send(pack);
 	TRACE("Send ret = %d\r\n", ret);
 	return 0;
-
 }
 
 int ExcuteCommand(int nCmd) {
@@ -444,6 +443,7 @@ int ExcuteCommand(int nCmd) {
 	}
 	return ret;
 }
+
 int main()
 {
     int nRetCode = 0;

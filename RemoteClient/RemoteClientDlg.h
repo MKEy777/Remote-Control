@@ -24,6 +24,11 @@ public:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
 
 private:
+	CImage m_image;//»º´æÆÁÄ»Í¼Ïñ
+	bool m_isFull; //»º´æÊÇ·ñÓÐÊý¾Ý
+private:
+	static void threadEntryForWatch(void* arg);
+	void threadWatchData();
 	static void threadEntryForDownFile(void* arg);	
 	void threadDownFile();
 	void LoadFileInfo();
