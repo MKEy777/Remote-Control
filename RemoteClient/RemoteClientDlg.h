@@ -23,11 +23,15 @@ public:
 	protected:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
 
+public:
+	bool isFull() const { return m_isFull; }
+	CImage& getImage() { return m_image; }
 private:
 	CImage m_image;//缓存屏幕图像
 	bool m_isFull; //缓存是否有数据
+
 private:
-	static void threadEntryForWatch(void* arg);
+	static void threadEntryForWatchData(void* arg);
 	void threadWatchData();
 	static void threadEntryForDownFile(void* arg);	
 	void threadDownFile();
@@ -74,4 +78,5 @@ public:
 	afx_msg void OnDeleteFile();
 	afx_msg void OnRunFile();
 	afx_msg LRESULT OnSendPacket(WPARAM wParam, LPARAM lParam);//定义自定义消息响应函数 ②
+	afx_msg void OnBnClickedBtnStartWatch();
 };

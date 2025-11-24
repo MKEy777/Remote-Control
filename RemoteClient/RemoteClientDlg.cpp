@@ -7,6 +7,7 @@
 #include "RemoteClientDlg.h"
 #include "afxdialogex.h"
 #include "ClientSocket.h"
+#include "CWatchDialog.h"
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -87,7 +88,7 @@ void CRemoteClientDlg::LoadFileCurrent()
 	pClient->CloseSocket();
 }
 
-void CRemoteClientDlg::threadEntryForWatch(void* arg)
+void CRemoteClientDlg::threadEntryForWatchData(void* arg)
 {
 	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
 	thiz->threadWatchData();
@@ -107,8 +108,25 @@ void CRemoteClientDlg::threadWatchData()
 			int cmd = pClient->DealCommand();//拿数据
 			if (cmd == 6) {
 				if (m_isFull == false) {
-					BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();//TODO
-					m_isFull = true;
+					BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
+					//存入CImage
+					HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);//创建一个全局内存块
+					if (hMem == NULL) {
+						TRACE("GlobalAlloc failed\r\n");
+						Sleep(10);
+						continue;
+					}
+					IStream* pStream = NULL;
+					HRESULT hRet=CreateStreamOnHGlobal(hMem, TRUE, &pStream);//把全局内存包装成一个 COM 流 (IStream)
+					if (hRet == S_OK) {
+						ULONG length = 0;//写入流的字节数
+						pStream->Write(pData, (ULONG)pClient->GetPacket().strData.size(), &length);//把数据写入流
+						LARGE_INTEGER bg = { 0 };
+						pStream->Seek(bg, STREAM_SEEK_SET, NULL);//把流的指针移到开头
+						m_image.Load(pStream);//从流中加载图像数据
+						m_isFull = true;
+					}
+					
 				}
 			}
 
@@ -268,6 +286,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_COMMAND(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
 	ON_COMMAND(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
 	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::OnSendPacket) //注册消息③
+	ON_BN_CLICKED(IDC_BTN_START_WATCH, &CRemoteClientDlg::OnBnClickedBtnStartWatch)
 END_MESSAGE_MAP()
 
 
@@ -545,4 +564,12 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 	}
 
 	return ret;
+}
+
+void CRemoteClientDlg::OnBnClickedBtnStartWatch()
+{
+	_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
+	//GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);//禁用按钮
+	CWatchDialog dlg(this);//创建观看对话框
+	dlg.DoModal();//模态对话框
 }
