@@ -22,6 +22,7 @@ protected:
 
 	DECLARE_MESSAGE_MAP()
 public:
+	CPoint m_lastPoint;
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	virtual BOOL OnInitDialog();
 	CStatic m_picture;

@@ -16,6 +16,7 @@ CWatchDialog::CWatchDialog(CWnd* pParent /*=nullptr*/)
 	: CDialog(IDD_DLG_WATCH, pParent)
 {
 	m_bFirstFrame = true;
+	m_lastPoint = CPoint(0, 0);
 
 }
 
@@ -187,8 +188,11 @@ void CWatchDialog::OnLButtonDblClk(UINT nFlags, CPoint point)
 
 void CWatchDialog::OnMouseMove(UINT nFlags, CPoint point)
 {
-	// 为了防止发送太频繁导致网络拥堵，可以加一个判断，移动距离超过一定值再发
-	SendMouseEvent(0, 4, point); // 0=移动(Action无所谓), 4=无按键
+	if ((abs(point.x - m_lastPoint.x) > 2) || (abs(point.y - m_lastPoint.y) > 2))
+	{
+		SendMouseEvent(0, 4, point); // 0=移动, 4=无按键
+		m_lastPoint = point;
+	}
 	CDialog::OnMouseMove(nFlags, point);
 }
 
