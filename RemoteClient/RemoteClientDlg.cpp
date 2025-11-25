@@ -101,15 +101,13 @@ void CRemoteClientDlg::threadWatchData()
 	do {
 		pClient = CClientSocket::GetInstance();
 	} while (pClient==NULL);
-	ULONGLONG tick = GetTickCount64();
+	//ULONGLONG tick = GetTickCount64();
 	for (;;) {
-		if (GetTickCount64() - tick < 50)//控制每50ms请求一次截图
-		{
-			Sleep(GetTickCount64() - tick);
-		}
-		int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);//发送请求截图命令，使用消息发送方式
-		if (ret==6) {
-			if (m_isFull == false) {
+		
+		if (m_isFull == false) {
+			ULONGLONG tick = GetTickCount64();
+			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);//发送请求截图命令，使用消息发送方式
+			if (ret == 6) {
 				BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
 				//存入CImage
 				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);//创建一个全局内存块
@@ -125,9 +123,18 @@ void CRemoteClientDlg::threadWatchData()
 					pStream->Write(pData, (ULONG)pClient->GetPacket().strData.size(), &length);//把数据写入流
 					LARGE_INTEGER bg = { 0 };
 					pStream->Seek(bg, STREAM_SEEK_SET, NULL);//把流的指针移到开头
+					// 如果 m_image 里已经有图了（比如上次关闭时残留的），先把它销毁
+					if (!m_image.IsNull()) {
+						m_image.Destroy();
+					}
 					m_image.Load(pStream);//从流中加载图像数据
 					m_isFull = true;
 				}
+			}
+			ULONGLONG elapsed = GetTickCount64() - tick;
+			if (elapsed < 50)
+			{
+				Sleep(50 - elapsed);
 			}
 		}
 		else {

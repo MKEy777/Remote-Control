@@ -182,7 +182,7 @@ public:
 	}
 	
 	//在“接收线程”里不停解析服务器发来的数据包。
-#define BUFFER_SIZE 2048000
+#define BUFFER_SIZE 20480000
 	int DealCommand() {
 		if (m_sock == -1) return -1;
 		char* buffer = m_buffer.data();
