@@ -123,6 +123,10 @@ void CRemoteClientDlg::threadWatchData()
 					pStream->Write(pData, (ULONG)pClient->GetPacket().strData.size(), &length);//把数据写入流
 					LARGE_INTEGER bg = { 0 };
 					pStream->Seek(bg, STREAM_SEEK_SET, NULL);//把流的指针移到开头
+					// 如果 m_image 里已经有图了（比如上次关闭时残留的），先把它销毁
+					if (!m_image.IsNull()) {
+						m_image.Destroy();
+					}
 					m_image.Load(pStream);//从流中加载图像数据
 					m_isFull = true;
 				}

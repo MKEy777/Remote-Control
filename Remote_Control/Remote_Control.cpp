@@ -218,9 +218,16 @@ int MouseEvent()
 		case 0x84://中键放开
 			mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
 			break;
-		case 0x08://单纯的鼠标移动
-			mouse_event(MOUSEEVENTF_MOVE, mouse.ptXY.x, mouse.ptXY.y, 0, GetMessageExtraInfo());
+		case 0x08:{//单纯的鼠标移动
+			int screenX = GetSystemMetrics(SM_CXSCREEN);
+			int screenY = GetSystemMetrics(SM_CYSCREEN);
+
+			LONG dx = mouse.ptXY.x * 65535 / (screenX - 1);
+			LONG dy = mouse.ptXY.y * 65535 / (screenY - 1);
+
+			mouse_event(MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, dx, dy, 0, GetMessageExtraInfo());
 			break;
+		}
 		}
 		CPacket pack(5, NULL, 0);
 		CServerSocket::GetInstance()->Send(pack);
