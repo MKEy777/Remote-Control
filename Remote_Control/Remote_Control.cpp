@@ -143,6 +143,20 @@ int MouseEvent()
 {
 	MOUSEEV mouse;
 	if (CServerSocket::GetInstance()->GetMouseEvent(mouse)) {
+		int screenW = GetSystemMetrics(SM_CXSCREEN);
+		int screenH = GetSystemMetrics(SM_CYSCREEN);
+		int packetW = screenW;
+		int packetH = screenH;
+
+		if (screenW > 1920) {
+			packetW = 1920;
+			packetH = screenH * 1920 / screenW;
+		}
+		long realX = (packetW > 0) ? (mouse.ptXY.x * screenW / packetW) : 0;
+		long realY = (packetH > 0) ? (mouse.ptXY.y * screenH / packetH) : 0;
+		if (realX < 0) realX = 0; if (realX >= screenW) realX = screenW - 1;
+		if (realY < 0) realY = 0; if (realY >= screenH) realY = screenH - 1;
+
 		DWORD nFlags = 0;
 		switch (mouse.nButton) {
 		case 0://左键
@@ -158,7 +172,7 @@ int MouseEvent()
 			nFlags = 8;
 			break;
 		}
-		if (nFlags != 8)SetCursorPos(mouse.ptXY.x, mouse.ptXY.y);
+		if (nFlags != 8)SetCursorPos(realX, realY);
 		switch (mouse.nAction)
 		{
 		case 0://单击
