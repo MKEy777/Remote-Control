@@ -30,6 +30,7 @@ public:
 private:
 	CImage m_image;//缓存屏幕图像
 	bool m_isFull; //缓存是否有数据
+	bool m_bStopWatch;//停止监视标志
 
 private:
 	static void threadEntryForWatchData(void* arg);

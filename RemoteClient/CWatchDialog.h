@@ -40,4 +40,7 @@ public:
 
 private:
 	bool m_bFirstFrame;
+public:
+	afx_msg void OnBnClickedBtnLock();
+	afx_msg void OnBnClickedBtnUnlock();
 };
