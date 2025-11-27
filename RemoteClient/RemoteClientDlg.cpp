@@ -102,7 +102,7 @@ void CRemoteClientDlg::threadWatchData()
 		pClient = CClientSocket::GetInstance();
 	} while (pClient==NULL);
 	//ULONGLONG tick = GetTickCount64();
-	for (;;) {
+	while(!m_bStopWatch){
 		
 		if (m_isFull == false) {
 			ULONGLONG tick = GetTickCount64();
@@ -576,8 +576,14 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
+	m_isFull = false; // 重置状态，表示当前没有数据
+	if (!m_image.IsNull()) {
+		m_image.Destroy(); // 如果有残留图片，销毁它
+	}
+	m_bStopWatch = false;
 	CWatchDialog dlg(this);//创建观看对话框
 	_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
 	//GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);//禁用按钮
 	dlg.DoModal();//模态对话框
+	m_bStopWatch = true;
 }
