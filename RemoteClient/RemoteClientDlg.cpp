@@ -103,7 +103,6 @@ void CRemoteClientDlg::threadWatchData()
 	} while (pClient==NULL);
 	//ULONGLONG tick = GetTickCount64();
 	while(!m_bStopWatch){
-		
 		if (m_isFull == false) {
 			ULONGLONG tick = GetTickCount64();
 			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);//发送请求截图命令，使用消息发送方式
@@ -123,7 +122,7 @@ void CRemoteClientDlg::threadWatchData()
 					pStream->Write(pData, (ULONG)pClient->GetPacket().strData.size(), &length);//把数据写入流
 					LARGE_INTEGER bg = { 0 };
 					pStream->Seek(bg, STREAM_SEEK_SET, NULL);//把流的指针移到开头
-					// 如果 m_image 里已经有图了（比如上次关闭时残留的），先把它销毁
+					// 如果 m_image 里已经有图了，先把它销毁
 					if (!m_image.IsNull()) {
 						m_image.Destroy();
 					}
@@ -134,7 +133,7 @@ void CRemoteClientDlg::threadWatchData()
 			ULONGLONG elapsed = GetTickCount64() - tick;
 			if (elapsed < 50)
 			{
-				Sleep(50 - elapsed);
+				Sleep((DWORD)(50 - elapsed));
 			}
 		}
 		else {
@@ -329,7 +328,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 
 	// TODO: Add extra initialization here
 	UpdateData();
-	m_serv_address = 0x0100007F;//192.168.1.100
+	m_serv_address = 0x0100007F;//0x6538A8C0 192.168.56.101 
 	m_nPort = _T("9527");
 	UpdateData(FALSE);
 	m_dlgStatus.Create(IDD_DLG_STATUS, this);
@@ -577,13 +576,11 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
 	m_isFull = false; // 重置状态，表示当前没有数据
-	if (!m_image.IsNull()) {
-		m_image.Destroy(); // 如果有残留图片，销毁它
-	}
 	m_bStopWatch = false;
 	CWatchDialog dlg(this);//创建观看对话框
-	_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
+	HANDLE hThread=(HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
 	//GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);//禁用按钮
 	dlg.DoModal();//模态对话框
 	m_bStopWatch = true;
+	WaitForSingleObject(hThread, 500);
 }

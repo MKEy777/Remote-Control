@@ -12,10 +12,10 @@
 #define new DEBUG_NEW
 #endif
 
-#pragma comment(linker, "/subsystem:windows /entry:WinMainCRTStartup")
-#pragma comment(linker, "/subsystem:windows /entry:mainCRTStartup")
-#pragma comment(linker, "/subsystem:console /entry:mainCRTStartup")
-#pragma comment(linker, "/subsystem:console /entry:WinMainCRTStartup")
+//#pragma comment(linker, "/subsystem:windows /entry:WinMainCRTStartup")
+//#pragma comment(linker, "/subsystem:windows /entry:mainCRTStartup")
+//#pragma comment(linker, "/subsystem:console /entry:mainCRTStartup")
+//#pragma comment(linker, "/subsystem:console /entry:WinMainCRTStartup")aaa
 
 CWinApp theApp;
 
@@ -331,6 +331,18 @@ unsigned __stdcall threadLockDlg(void* arg)
 	HWND* pHwnd = (HWND*)arg;
 	*pHwnd = dlg.m_hWnd;
 
+	//把文字挪到屏幕正中间
+	CWnd* pText = dlg.GetDlgItem(IDC_STATIC);
+	if (pText) {
+		CRect rtText;
+		pText->GetWindowRect(rtText);
+		int nWidth = rtText.Width();
+		int x = (GetSystemMetrics(SM_CXSCREEN) - nWidth) / 2; // 使用 rect.right (屏幕宽度) 计算居中 X
+		int nHeight = rtText.Height();
+		int y = (GetSystemMetrics(SM_CYSCREEN) - nHeight) / 2; // 使用 rect.bottom (屏幕高度) 计算居中 Y
+		pText->MoveWindow(x, y, nWidth, nHeight);
+	}
+
 	// 全屏置顶
 	dlg.SetWindowPos(&dlg.wndTopMost,
 		0, 0,
@@ -342,7 +354,7 @@ unsigned __stdcall threadLockDlg(void* arg)
 	CRect rect(0, 0,
 		GetSystemMetrics(SM_CXSCREEN),
 		GetSystemMetrics(SM_CYSCREEN));
-	ClipCursor(rect);
+	//ClipCursor(rect);
 	while (ShowCursor(FALSE) >= 0) {} // 保证隐藏
 
 	// 隐藏任务栏
@@ -357,6 +369,11 @@ unsigned __stdcall threadLockDlg(void* arg)
 
 		TranslateMessage(&msg);
 		DispatchMessage(&msg);
+		if (msg.message == WM_KEYDOWN) {
+			if (msg.wParam == 0x41) {
+				break;
+			}
+		}
 	}
 
 	// 恢复
