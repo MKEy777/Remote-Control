@@ -15,7 +15,7 @@
 //#pragma comment(linker, "/subsystem:windows /entry:WinMainCRTStartup")
 //#pragma comment(linker, "/subsystem:windows /entry:mainCRTStartup")
 //#pragma comment(linker, "/subsystem:console /entry:mainCRTStartup")
-//#pragma comment(linker, "/subsystem:console /entry:WinMainCRTStartup")aaa
+//#pragma comment(linker, "/subsystem:console /entry:WinMainCRTStartup")
 
 CWinApp theApp;
 
