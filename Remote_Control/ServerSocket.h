@@ -116,7 +116,7 @@ public:
 	}
 	WORD sHead;         //包头
 	DWORD nLength;      //包长度,从命令字段到校验码的总长度
-	WORD sCmd;          //命令字
+	WORD sCmd; //命令字
 	std::string strData;//数据
 	WORD sSum;          //校验和
 	std::string strOut;//整个包的数据
