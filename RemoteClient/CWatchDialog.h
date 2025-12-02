@@ -25,6 +25,7 @@ public:
 	CPoint m_lastPoint;
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	virtual BOOL OnInitDialog();
+	virtual BOOL PreTranslateMessage(MSG* pMsg);// 捕获键盘消息
 	CStatic m_picture;
 	//afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point); // 左键按下
@@ -43,4 +44,5 @@ private:
 public:
 	afx_msg void OnBnClickedBtnLock();
 	afx_msg void OnBnClickedBtnUnlock();
+	virtual void OnOK();
 };

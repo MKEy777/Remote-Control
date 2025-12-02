@@ -60,6 +60,18 @@ BOOL CWatchDialog::OnInitDialog()
 	// 异常: OCX 属性页应返回 FALSE
 }
 
+BOOL CWatchDialog::PreTranslateMessage(MSG* pMsg)
+{
+	if (pMsg->message == WM_KEYDOWN)
+	{
+		if (pMsg->wParam == VK_RETURN)
+		{
+			return TRUE; // 拦截回车键，防止触发默认按钮（锁机）
+		}
+	}
+	return CDialog::PreTranslateMessage(pMsg);
+}
+
 void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
@@ -70,17 +82,21 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			CImage& img = pParent->getImage();//获取图像引用
 			if (m_bFirstFrame)
 			{
+				int nToolBarHeight = 80;
 				// 1. 获取受控端屏幕的真实大小
 				int nWidth = img.GetWidth();
 				int nHeight = img.GetHeight();
 				// 2. 计算窗口边框大小
-				CRect rectWindow(0, 0, nWidth, nHeight);
+				CRect rectWindow(0, 0, nWidth, nHeight + nToolBarHeight);
 				CalcWindowRect(&rectWindow);
 				// 3. 调整对话框窗口大小
 				SetWindowPos(NULL, 0, 0, rectWindow.Width(), rectWindow.Height(), SWP_NOMOVE | SWP_NOZORDER);
 				// 4. 调整内部 Picture Control 控件的大小，让它填满客户区
 				if (m_picture.GetSafeHwnd()) {
 					m_picture.MoveWindow(0, 0, nWidth, nHeight);
+				}
+				if (m_picture.GetSafeHwnd()) {
+					m_picture.MoveWindow(0, nToolBarHeight, nWidth, nHeight);
 				}
 				// 5. 居中显示并在调整后标记为 false
 				CenterWindow();
@@ -132,6 +148,10 @@ void CWatchDialog::SendMouseEvent(int nAction, int nButton, CPoint point) {
 
 CPoint CWatchDialog::UserPoint2RemotePoint(CPoint& point)
 {
+	CPoint ptControl = point;
+	ClientToScreen(&ptControl);             // 1. 先转成屏幕绝对坐标
+	m_picture.ScreenToClient(&ptControl);   // 2. 再转成画面控件内的相对坐标
+	
 	CRect rect;
 	m_picture.GetClientRect(&rect);
 	// 计算比例
@@ -152,8 +172,8 @@ CPoint CWatchDialog::UserPoint2RemotePoint(CPoint& point)
 	if (nViewWidth == 0 || nViewHeight == 0) return CPoint(0, 0);
 
 	// 坐标映射：真实坐标 = 点击坐标 * (原始尺寸 / 视图尺寸)
-	int x = (int)((float)point.x * nImgWidth / nViewWidth + 0.5f);
-	int y = (int)((float)point.y * nImgHeight / nViewHeight + 0.5f);
+	int x = (int)((float)ptControl.x * nImgWidth / nViewWidth + 0.5f);
+	int y = (int)((float)ptControl.y * nImgHeight / nViewHeight + 0.5f);
 
 	return CPoint(x, y);
 }
@@ -218,4 +238,10 @@ void CWatchDialog::OnBnClickedBtnUnlock()
 {
 	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
 	pParent->SendMessage(WM_SEND_PACKET, 8 << 1 | 1);//发送解锁命令
+}
+
+void CWatchDialog::OnOK()
+{
+	// 按回车键时对话框不会关闭
+	//CDialog::OnOK();
 }
