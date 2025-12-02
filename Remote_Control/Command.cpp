@@ -75,11 +75,7 @@ int CCommand::MakeDriverInfo(std::list<CPacket>& lstPacket, CPacket& inPacket) {
     return 0;
 }
 int CCommand::MakeDirectoryInfo(std::list<CPacket>& lstPacket, CPacket& inPacket) {
-    std::string strPath;
-    if (CServerSocket::GetInstance()->GetFilePath(strPath) == false) {
-        OutputDebugString(_T("当前的命令，不是获取文件列表，命令解析错误！！"));
-        return -1;
-    }
+    std::string strPath= inPacket.strData;
     if (_chdir(strPath.c_str()) != 0) {
         FILEINFO finfo;
         finfo.HasNext = FALSE;
@@ -114,15 +110,13 @@ int CCommand::MakeDirectoryInfo(std::list<CPacket>& lstPacket, CPacket& inPacket
     return 0;
 }
 int CCommand::RunFile(std::list<CPacket>& lstPacket, CPacket& inPacket) {
-    std::string strPath;
-    CServerSocket::GetInstance()->GetFilePath(strPath);
+    std::string strPath = inPacket.strData;
     ShellExecuteA(NULL, NULL, strPath.c_str(), NULL, NULL, SW_SHOWNORMAL);
     lstPacket.push_back(CPacket(3, NULL, 0));
     return 0;
 }
 int CCommand::DownloadFile(std::list<CPacket>& lstPacket, CPacket& inPacket) {
-    std::string strPath;
-    CServerSocket::GetInstance()->GetFilePath(strPath);
+    std::string strPath = inPacket.strData;
     long long data = 0;
     FILE* pFile = NULL;
     errno_t err = fopen_s(&pFile, strPath.c_str(), "rb");
@@ -147,6 +141,7 @@ int CCommand::DownloadFile(std::list<CPacket>& lstPacket, CPacket& inPacket) {
 }
 int CCommand::MouseEvent(std::list<CPacket>& lstPacket, CPacket& inPacket) {
     MOUSEEV mouse;
+    memcpy(&mouse, inPacket.strData.c_str(), sizeof(MOUSEEV));
     if (CServerSocket::GetInstance()->GetMouseEvent(mouse)) {
         int screenW = GetSystemMetrics(SM_CXSCREEN);
         int screenH = GetSystemMetrics(SM_CYSCREEN);
@@ -288,8 +283,7 @@ int CCommand::UnlockMachine(std::list<CPacket>& lstPacket, CPacket& inPacket)
     return 0;
 }
 int CCommand::DeleteLocalFile(std::list<CPacket>& lstPacket, CPacket& inPacket) {
-    std::string strPath;
-    CServerSocket::GetInstance()->GetFilePath(strPath);
+    std::string strPath = inPacket.strData;
     DeleteFileA(strPath.c_str());
     lstPacket.push_back(CPacket(9, NULL, 0));
     return 0;
