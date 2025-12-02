@@ -2,6 +2,9 @@
 #include "pch.h"
 #include "framework.h"
 #include <vector>
+#include <list>
+
+
 
 class CPacket {
 public:
@@ -36,8 +39,7 @@ public:
 	}
 
 	//数据包解包，将包中的数据分配到成员变量中
-	CPacket(const BYTE* pData, size_t& nSize)
-	{
+	CPacket(const BYTE* pData, size_t& nSize){
 		size_t i = 0;
 
 		// ① 查找包头 0xFEFF
@@ -114,6 +116,7 @@ public:
 		*(WORD*)pData = sSum;
 		return strOut.c_str();
 	}
+
 	WORD sHead;         //包头
 	DWORD nLength;      //包长度,从命令字段到校验码的总长度
 	WORD sCmd; //命令字
@@ -144,6 +147,7 @@ typedef struct file_info {
 	BOOL HasNext;//是否还有后续 0 没有 1 有
 	char szFileName[256];//文件名
 }FILEINFO, * PFILEINFO;
+typedef void(*SOCKET_CALLBACK)(void* arg, int status,std::list<CPacket>&);
 
 class CServerSocket//单例模式
 {
@@ -154,14 +158,14 @@ class CServerSocket//单例模式
 			}
 			return m_instance;
 		}
-		bool InitSocket() {
+		bool InitSocket(short port) {
 			if (m_sock == -1) return false;
 
 			sockaddr_in serv_adr;
 			memset(&serv_adr, 0, sizeof(serv_adr));
 			serv_adr.sin_family = AF_INET;
 			serv_adr.sin_addr.s_addr = INADDR_ANY;
-			serv_adr.sin_port = htons(9527);
+			serv_adr.sin_port = htons(port);
 
 			if (bind(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {// 绑定套接字；(套接字，地址结构体指针，结构体大小)
 				return false;
@@ -171,6 +175,34 @@ class CServerSocket//单例模式
 			}
 			return true;
 		}
+		int Run(SOCKET_CALLBACK callback, void* arg, short port = 9527)
+		{
+			bool ret = InitSocket(port);
+			if (ret == false) return -1;
+			std::list<CPacket> lstPackets;
+			int count = 0;
+			m_callback = callback;
+			m_arg = arg;
+			while (true) {
+				if (AcceptClient() == false) {
+					if (count >= 3) {
+						return -2;
+					}
+					count++;
+				}
+
+				int cmdRet = DealCommand();
+				if (cmdRet > 0) {
+					m_callback(m_arg, ret, lstPackets);
+					while (lstPackets.size() > 0) {
+						Send(lstPackets.front());
+						lstPackets.pop_front();
+					}
+				}
+				CloseClient();
+			}
+		}
+
 		bool AcceptClient() {
 			sockaddr_in client_adr;
 			int cli_sz = sizeof(client_adr);
@@ -264,6 +296,8 @@ class CServerSocket//单例模式
 		CPacket m_packet;
 		std::vector<char> m_buffer;
 		size_t m_index = 0;
+		SOCKET_CALLBACK m_callback;
+		void* m_arg;
 		CServerSocket& operator=(const CServerSocket& ss) {}
 		CServerSocket(const CServerSocket& ss) {};
 		CServerSocket() {
