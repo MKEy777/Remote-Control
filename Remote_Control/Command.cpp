@@ -61,7 +61,7 @@ void CCommand::RunCommand(void* arg, int status, std::list<CPacket>& lstPacket, 
 		MessageBox(NULL, _T("无法正常接入队列，自动重连..."), _T("j接入用户失败"), MB_OK | MB_ICONERROR);
     }
 }
-// 修复：为所有命令处理函数补充缺失的参数 CPacket& inPacket
+
 int CCommand::MakeDriverInfo(std::list<CPacket>& lstPacket, CPacket& inPacket) {
     std::string result;
     for (int i = 1; i <= 26; i++) {
@@ -245,7 +245,7 @@ int CCommand::SendScreen(std::list<CPacket>& lstPacket, CPacket& inPacket) {
         pStream->Seek(bg, STREAM_SEEK_SET, NULL);
         PBYTE pData = (PBYTE)GlobalLock(hMem);
         SIZE_T nSize = GlobalSize(hMem);
-        lstPacket.push_back(CPacket(6, (BYTE*)&nSize, 4));
+        lstPacket.push_back(CPacket(6, (BYTE*)pData, nSize));
         GlobalUnlock(hMem);
     }
     pStream->Release();
