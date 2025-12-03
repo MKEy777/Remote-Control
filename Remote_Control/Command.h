@@ -38,7 +38,7 @@ protected:
     static unsigned __stdcall threadLockDlg(void* arg);
 
     // 命令函数指针定义
-    typedef int(CCommand::* CMDFUNC)(std::list<CPacket>&, CPacket& inPacket);
+    typedef int(CCommand::* CMDFUNC)(std::list<CPacket>& lstPacket, CPacket& inPacket);
     // 命令映射表
     std::map<int, CMDFUNC> m_mapCmd;
 };

@@ -79,8 +79,7 @@ int CCommand::MakeDirectoryInfo(std::list<CPacket>& lstPacket, CPacket& inPacket
     if (_chdir(strPath.c_str()) != 0) {
         FILEINFO finfo;
         finfo.HasNext = FALSE;
-        CPacket pack(2, (BYTE*)&finfo, sizeof(finfo));
-        CServerSocket::GetInstance()->Send(pack);
+		lstPacket.push_back(CPacket(2, (BYTE*)&finfo, sizeof(finfo)));
         OutputDebugString(_T("没有权限访问目录！！"));
         return -2;
     }
@@ -142,77 +141,72 @@ int CCommand::DownloadFile(std::list<CPacket>& lstPacket, CPacket& inPacket) {
 int CCommand::MouseEvent(std::list<CPacket>& lstPacket, CPacket& inPacket) {
     MOUSEEV mouse;
     memcpy(&mouse, inPacket.strData.c_str(), sizeof(MOUSEEV));
-    if (CServerSocket::GetInstance()->GetMouseEvent(mouse)) {
-        int screenW = GetSystemMetrics(SM_CXSCREEN);
-        int screenH = GetSystemMetrics(SM_CYSCREEN);
-        int packetW = screenW;
-        int packetH = screenH;
+    int screenW = GetSystemMetrics(SM_CXSCREEN);
+    int screenH = GetSystemMetrics(SM_CYSCREEN);
+    int packetW = screenW;
+    int packetH = screenH;
 
-        if (screenW > 1920) {
-            packetW = 1920;
-            packetH = screenH * 1920 / screenW;
-        }
-        long realX = (packetW > 0) ? (mouse.ptXY.x * screenW / packetW) : 0;
-        long realY = (packetH > 0) ? (mouse.ptXY.y * screenH / packetH) : 0;
-
-        DWORD nFlags = 0;
-        switch (mouse.nButton) {
-        case 0: nFlags = 1; break;
-        case 1: nFlags = 2; break;
-        case 2: nFlags = 4; break;
-        case 4: nFlags = 8; break;
-        }
-        if (nFlags != 8) SetCursorPos(realX, realY);
-
-        switch (mouse.nAction) {
-        case 0: nFlags |= 0x10; break;
-        case 1: nFlags |= 0x20; break;
-        case 2: nFlags |= 0x40; break;
-        case 3: nFlags |= 0x80; break;
-        }
-
-        switch (nFlags) {
-        case 0x21: // 左双
-            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
-            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
-        case 0x11: // 左单
-            mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
-            mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
-            break;
-        case 0x41: mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo()); break;
-        case 0x81: mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo()); break;
-        case 0x22: // 右双
-            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
-            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
-        case 0x12: // 右单
-            mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
-            mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
-            break;
-        case 0x42: mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo()); break;
-        case 0x82: mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo()); break;
-        case 0x24: // 中双
-            mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
-            mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
-        case 0x14: // 中单
-            mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
-            mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
-            break;
-        case 0x44: mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo()); break;
-        case 0x84: mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo()); break;
-        case 0x08: { // 移动
-            int screenX = GetSystemMetrics(SM_CXSCREEN);
-            int screenY = GetSystemMetrics(SM_CYSCREEN);
-            LONG dx = mouse.ptXY.x * 65535 / (screenX - 1);
-            LONG dy = mouse.ptXY.y * 65535 / (screenY - 1);
-            mouse_event(MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, dx, dy, 0, GetMessageExtraInfo());
-            break;
-        }
-        }
-        lstPacket.push_back(CPacket(5, NULL, 0));
+    if (screenW > 1920) {
+        packetW = 1920;
+        packetH = screenH * 1920 / screenW;
     }
-    else {
-        return -1;
+    long realX = (packetW > 0) ? (mouse.ptXY.x * screenW / packetW) : 0;
+    long realY = (packetH > 0) ? (mouse.ptXY.y * screenH / packetH) : 0;
+
+    DWORD nFlags = 0;
+    switch (mouse.nButton) {
+    case 0: nFlags = 1; break;
+    case 1: nFlags = 2; break;
+    case 2: nFlags = 4; break;
+    case 4: nFlags = 8; break;
     }
+    if (nFlags != 8) SetCursorPos(realX, realY);
+
+    switch (mouse.nAction) {
+    case 0: nFlags |= 0x10; break;
+    case 1: nFlags |= 0x20; break;
+    case 2: nFlags |= 0x40; break;
+    case 3: nFlags |= 0x80; break;
+    }
+
+    switch (nFlags) {
+    case 0x21: // 左双
+        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
+    case 0x11: // 左单
+        mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo());
+        mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo());
+        break;
+    case 0x41: mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, GetMessageExtraInfo()); break;
+    case 0x81: mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, GetMessageExtraInfo()); break;
+    case 0x22: // 右双
+        mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
+        mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
+    case 0x12: // 右单
+        mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo());
+        mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo());
+        break;
+    case 0x42: mouse_event(MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, GetMessageExtraInfo()); break;
+    case 0x82: mouse_event(MOUSEEVENTF_RIGHTUP, 0, 0, 0, GetMessageExtraInfo()); break;
+    case 0x24: // 中双
+        mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
+        mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
+    case 0x14: // 中单
+        mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo());
+        mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo());
+        break;
+    case 0x44: mouse_event(MOUSEEVENTF_MIDDLEDOWN, 0, 0, 0, GetMessageExtraInfo()); break;
+    case 0x84: mouse_event(MOUSEEVENTF_MIDDLEUP, 0, 0, 0, GetMessageExtraInfo()); break;
+    case 0x08: { // 移动
+        int screenX = GetSystemMetrics(SM_CXSCREEN);
+        int screenY = GetSystemMetrics(SM_CYSCREEN);
+        LONG dx = mouse.ptXY.x * 65535 / (screenX - 1);
+        LONG dy = mouse.ptXY.y * 65535 / (screenY - 1);
+        mouse_event(MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, dx, dy, 0, GetMessageExtraInfo());
+        break;
+    }
+    }
+    lstPacket.push_back(CPacket(5, NULL, 0));
     return 0;
 }
 int CCommand::SendScreen(std::list<CPacket>& lstPacket, CPacket& inPacket) {
