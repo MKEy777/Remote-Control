@@ -295,7 +295,7 @@ private:
 		}
 		return TRUE;
 	}
-	static void ReleaserInstance() {
+	static void ReleaseInstance() {
 		if (m_instance != nullptr) {
 			CClientSocket* tmp = m_instance;
 			m_instance = nullptr;
@@ -309,7 +309,7 @@ private:
 			CClientSocket::GetInstance();
 		}
 		~CHelper() {
-			CClientSocket::ReleaserInstance();
+			CClientSocket::ReleaseInstance();
 		}
 	};
 	static CHelper m_helper;
