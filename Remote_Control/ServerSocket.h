@@ -9,29 +9,12 @@ typedef void(*SOCKET_CALLBACK)(void* arg, int status,std::list<CPacket>&, CPacke
 
 class CServerSocket//单例模式
 {
-	public:
+public:
 		static CServerSocket* GetInstance() {//静态函数没有this指针，只能访问静态成员变量
 			if (m_instance == nullptr) {
 				m_instance = new CServerSocket();
 			}
 			return m_instance;
-		}
-		bool InitSocket(short port) {
-			if (m_sock == -1) return false;
-
-			sockaddr_in serv_adr;
-			memset(&serv_adr, 0, sizeof(serv_adr));
-			serv_adr.sin_family = AF_INET;
-			serv_adr.sin_addr.s_addr = INADDR_ANY;
-			serv_adr.sin_port = htons(port);
-
-			if (bind(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {// 绑定套接字；(套接字，地址结构体指针，结构体大小)
-				return false;
-			}
-			if (listen(m_sock, 1) == -1) { // 监听连接；(套接字，等待队列大小)
-				return false;
-			}
-			return true;
 		}
 		int Run(SOCKET_CALLBACK callback, void* arg, short port = 9527)
 		{
@@ -59,8 +42,26 @@ class CServerSocket//单例模式
 				}
 				CloseClient();
 			}
+			return 0;
 		}
+protected:
+		bool InitSocket(short port) {
+			if (m_sock == -1) return false;
 
+			sockaddr_in serv_adr;
+			memset(&serv_adr, 0, sizeof(serv_adr));
+			serv_adr.sin_family = AF_INET;
+			serv_adr.sin_addr.s_addr = INADDR_ANY;
+			serv_adr.sin_port = htons(port);
+
+			if (bind(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {// 绑定套接字；(套接字，地址结构体指针，结构体大小)
+				return false;
+			}
+			if (listen(m_sock, 1) == -1) { // 监听连接；(套接字，等待队列大小)
+				return false;
+			}
+			return true;
+		}
 		bool AcceptClient() {
 			sockaddr_in client_adr;
 			int cli_sz = sizeof(client_adr);
@@ -125,14 +126,14 @@ class CServerSocket//单例模式
 			delete[] pData;
 			return bRet;
 		}
-		bool GetFilePath(std::string& strPath) {
+		/*bool GetFilePath(std::string& strPath) {
 			if ((m_packet.sCmd >= 2 && m_packet.sCmd <= 4) ||m_packet.sCmd==9 ) {
 				strPath = m_packet.strData;
 				return true;
 			}
 			return false;
-		}
-		bool GetMouseEvent(MOUSEEV &MouseEv) {
+		}*/
+		/*bool GetMouseEvent(MOUSEEV &MouseEv) {
 			if (m_packet.sCmd == 5) {
 				if (m_packet.strData.size() == sizeof(MOUSEEV)) {
 					memcpy(&MouseEv, m_packet.strData.c_str(), sizeof(MOUSEEV));
@@ -140,7 +141,7 @@ class CServerSocket//单例模式
 				}
 			}
 			return false;
-		}
+		}*/
 		CPacket& GetPacket() {
 			return m_packet;
 		}
