@@ -8932,9 +8932,9 @@
 													"fontColor": "#212121",
 													"font": "Times New Roman;20;0",
 													"parentStyle": true,
-													"left": 438.75390625,
+													"left": 452.42578125,
 													"top": 221,
-													"width": 153.486328125,
+													"width": 182.431640625,
 													"height": 20,
 													"text": "hModule != nullptr"
 												},
@@ -8951,7 +8951,7 @@
 													"parentStyle": true,
 													"left": 365,
 													"top": 221,
-													"width": 67.75390625,
+													"width": 81.42578125,
 													"height": 20,
 													"text": "consider"
 												},
@@ -9319,9 +9319,9 @@
 													"fontColor": "#212121",
 													"font": "Times New Roman;20;0",
 													"parentStyle": true,
-													"left": 510.75390625,
+													"left": 524.42578125,
 													"top": 349,
-													"width": 497.51953125,
+													"width": 569.521484375,
 													"height": 20,
 													"text": "AfxWinInit(hModule, nullptr, ::GetCommandLine(), 0)==true"
 												},
@@ -9338,7 +9338,7 @@
 													"parentStyle": true,
 													"left": 437,
 													"top": 349,
-													"width": 67.75390625,
+													"width": 81.42578125,
 													"height": 20,
 													"text": "consider"
 												},
@@ -9850,9 +9850,9 @@
 													"fontColor": "#212121",
 													"font": "Times New Roman;20;0",
 													"parentStyle": true,
-													"left": 558.75390625,
+													"left": 572.42578125,
 													"top": 533,
-													"width": 242.236328125,
+													"width": 286.669921875,
 													"height": 20,
 													"text": "pserver->InitSocket() == false"
 												},
@@ -9869,7 +9869,7 @@
 													"parentStyle": true,
 													"left": 485,
 													"top": 533,
-													"width": 67.75390625,
+													"width": 81.42578125,
 													"height": 20,
 													"text": "consider"
 												},
@@ -10237,9 +10237,9 @@
 													"fontColor": "#212121",
 													"font": "Times New Roman;20;0",
 													"parentStyle": true,
-													"left": 526.556640625,
+													"left": 534.525390625,
 													"top": 701,
-													"width": 190.087890625,
+													"width": 211.337890625,
 													"height": 20,
 													"text": "GetInstance() != NULL"
 												},
@@ -10256,7 +10256,7 @@
 													"parentStyle": true,
 													"left": 485,
 													"top": 701,
-													"width": 35.556640625,
+													"width": 43.525390625,
 													"height": 20,
 													"text": "loop"
 												},
@@ -10624,9 +10624,9 @@
 													"fontColor": "#212121",
 													"font": "Times New Roman;20;0",
 													"parentStyle": true,
-													"left": 606.75390625,
+													"left": 620.42578125,
 													"top": 925,
-													"width": 155.68359375,
+													"width": 182.626953125,
 													"height": 20,
 													"text": "DealCommand()>0"
 												},
@@ -10643,7 +10643,7 @@
 													"parentStyle": true,
 													"left": 533,
 													"top": 925,
-													"width": 67.75390625,
+													"width": 81.42578125,
 													"height": 20,
 													"text": "consider"
 												},
@@ -11479,9 +11479,9 @@
 													"fontColor": "#212121",
 													"font": "Times New Roman;20;0",
 													"parentStyle": true,
-													"left": 36.783203125,
+													"left": 41.05078125,
 													"top": 13,
-													"width": 96.62109375,
+													"width": 115.09765625,
 													"height": 20,
 													"text": "Interaction2"
 												},
@@ -11498,7 +11498,7 @@
 													"parentStyle": true,
 													"left": 13,
 													"top": 13,
-													"width": 17.783203125,
+													"width": 22.05078125,
 													"height": 20,
 													"text": "sd"
 												}
@@ -19711,7 +19711,7 @@
 											"parentStyle": true,
 											"left": 2397,
 											"top": 615,
-											"width": 370.208984375,
+											"width": 419.564453125,
 											"height": 20,
 											"text": "CWnd"
 										},
@@ -19729,7 +19729,7 @@
 											"parentStyle": true,
 											"left": -252,
 											"top": 192,
-											"width": 168.291015625,
+											"width": 194.052734375,
 											"height": 20,
 											"text": "(from RemoteClient)"
 										},
@@ -19758,7 +19758,7 @@
 									"parentStyle": true,
 									"left": 2392,
 									"top": 608,
-									"width": 380.208984375,
+									"width": 429.564453125,
 									"height": 32,
 									"stereotypeLabel": {
 										"$ref": "AAAAAAGa4zF3hKFfQ4E="
@@ -19789,7 +19789,7 @@
 									"parentStyle": true,
 									"left": 2392,
 									"top": 640,
-									"width": 380.208984375,
+									"width": 429.564453125,
 									"height": 10
 								},
 								{
@@ -19818,7 +19818,7 @@
 											"parentStyle": true,
 											"left": 2397,
 											"top": 655,
-											"width": 370.208984375,
+											"width": 419.564453125,
 											"height": 20,
 											"text": "+ShowWindow(nCmdShow: int): BOOL",
 											"horizontalAlignment": 0
@@ -19839,7 +19839,7 @@
 											"parentStyle": true,
 											"left": 2397,
 											"top": 677,
-											"width": 370.208984375,
+											"width": 419.564453125,
 											"height": 20,
 											"text": "+Create(): BOOL",
 											"horizontalAlignment": 0
@@ -19860,7 +19860,7 @@
 											"parentStyle": true,
 											"left": 2397,
 											"top": 699,
-											"width": 370.208984375,
+											"width": 419.564453125,
 											"height": 20,
 											"text": "+RunModalLoop(dwFlags: DWORD = 0): int",
 											"horizontalAlignment": 0
@@ -19873,7 +19873,7 @@
 									"parentStyle": true,
 									"left": 2392,
 									"top": 650,
-									"width": 380.208984375,
+									"width": 429.564453125,
 									"height": 74
 								},
 								{
@@ -19925,7 +19925,7 @@
 							"containerChangeable": true,
 							"left": 2392,
 							"top": 608,
-							"width": 379.208984375,
+							"width": 428.564453125,
 							"height": 116,
 							"nameCompartment": {
 								"$ref": "AAAAAAGa4zF3hKFeNsI="
@@ -20102,7 +20102,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 799,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "CWatchDialog"
 										},
@@ -20120,7 +20120,7 @@
 											"parentStyle": true,
 											"left": -248,
 											"top": -310,
-											"width": 168.291015625,
+											"width": 194.052734375,
 											"height": 20,
 											"text": "(from RemoteClient)"
 										},
@@ -20149,7 +20149,7 @@
 									"parentStyle": true,
 									"left": 1904,
 									"top": 792,
-									"width": 536.126953125,
+									"width": 617.71875,
 									"height": 32,
 									"stereotypeLabel": {
 										"$ref": "AAAAAAGa4zLpMNL1oL4="
@@ -20190,7 +20190,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 829,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+m_nObjWidth: int",
 											"horizontalAlignment": 0
@@ -20211,7 +20211,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 851,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+m_nObjHeight: int",
 											"horizontalAlignment": 0
@@ -20232,7 +20232,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 873,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+m_noheight: int",
 											"horizontalAlignment": 0
@@ -20245,7 +20245,7 @@
 									"parentStyle": true,
 									"left": 1904,
 									"top": 824,
-									"width": 536.126953125,
+									"width": 617.71875,
 									"height": 74
 								},
 								{
@@ -20274,7 +20274,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 903,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "-CWatchDialog(pParent: CWnd*)",
 											"horizontalAlignment": 0
@@ -20295,7 +20295,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 925,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "-~CWatchDialog()()",
 											"horizontalAlignment": 0
@@ -20316,7 +20316,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 947,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "#DoDataExchange(pDX: CDataExchange*): void",
 											"horizontalAlignment": 0
@@ -20337,7 +20337,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 969,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+UserPrint2RemoteScreen(point: CPoint, isScreen: bool): CPoint",
 											"horizontalAlignment": 0
@@ -20358,7 +20358,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 991,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnInitDialog(): BOOL",
 											"horizontalAlignment": 0
@@ -20379,7 +20379,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1013,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnTimer(nIDEvent: UINT_PTR): void",
 											"horizontalAlignment": 0
@@ -20400,7 +20400,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1035,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnLButtonDblClk(nFlags: UINT, point: CPoint)",
 											"horizontalAlignment": 0
@@ -20421,7 +20421,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1057,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnLButtonDown(nFlags: UINT, point: CPoint): void",
 											"horizontalAlignment": 0
@@ -20442,7 +20442,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1079,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnLButtonUp(nFlags: UINT, point: CPoint): void",
 											"horizontalAlignment": 0
@@ -20463,7 +20463,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1101,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnRButtonDblClk(nFlags: UINT, point: CPoint)",
 											"horizontalAlignment": 0
@@ -20484,7 +20484,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1123,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnRButtonDown(nFlags: UINT, point: CPoint): void",
 											"horizontalAlignment": 0
@@ -20505,7 +20505,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1145,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnRButtonUp(nFlags: UINT, point: CPoint): void",
 											"horizontalAlignment": 0
@@ -20526,7 +20526,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1167,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnMouseMove(nFlags: UINT, point: CPoint): void",
 											"horizontalAlignment": 0
@@ -20547,7 +20547,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1189,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnMouseMove(nHitTest: UINT, point: CPoint)",
 											"horizontalAlignment": 0
@@ -20568,7 +20568,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1211,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnStrClickedWatch()",
 											"horizontalAlignment": 0
@@ -20589,7 +20589,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1233,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnOK(): void",
 											"horizontalAlignment": 0
@@ -20610,7 +20610,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1255,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnBnClickedBtnLock()",
 											"horizontalAlignment": 0
@@ -20631,7 +20631,7 @@
 											"parentStyle": true,
 											"left": 1909,
 											"top": 1277,
-											"width": 526.126953125,
+											"width": 607.71875,
 											"height": 20,
 											"text": "+OnBnClickedBtnUnlock()",
 											"horizontalAlignment": 0
@@ -20644,7 +20644,7 @@
 									"parentStyle": true,
 									"left": 1904,
 									"top": 898,
-									"width": 536.126953125,
+									"width": 617.71875,
 									"height": 404
 								},
 								{
@@ -20696,7 +20696,7 @@
 							"containerChangeable": true,
 							"left": 1904,
 							"top": 792,
-							"width": 535.126953125,
+							"width": 616.71875,
 							"height": 510,
 							"nameCompartment": {
 								"$ref": "AAAAAAGa4zLpMNL0K4A="
@@ -20821,6 +20821,329 @@
 							},
 							"propertyLabel": {
 								"$ref": "AAAAAAGa4zshOz/nu6k="
+							}
+						},
+						{
+							"_type": "UMLClassView",
+							"_id": "AAAAAAGa5Iu0T+QbLUo=",
+							"_parent": {
+								"$ref": "AAAAAAGa4tgPXPpRfIw="
+							},
+							"model": {
+								"$ref": "AAAAAAGa5IuIUOPXClI="
+							},
+							"subViews": [
+								{
+									"_type": "UMLNameCompartmentView",
+									"_id": "AAAAAAGa5Iu0T+Qc8iA=",
+									"_parent": {
+										"$ref": "AAAAAAGa5Iu0T+QbLUo="
+									},
+									"model": {
+										"$ref": "AAAAAAGa5IuIUOPXClI="
+									},
+									"subViews": [
+										{
+											"_type": "LabelView",
+											"_id": "AAAAAAGa5Iu0T+QdhhM=",
+											"_parent": {
+												"$ref": "AAAAAAGa5Iu0T+Qc8iA="
+											},
+											"visible": false,
+											"lineColor": "#00509e",
+											"fillColor": "#f0f8ff",
+											"fontColor": "#212121",
+											"font": "Times New Roman;20;0",
+											"parentStyle": true,
+											"left": -536,
+											"top": -202,
+											"height": 20
+										},
+										{
+											"_type": "LabelView",
+											"_id": "AAAAAAGa5Iu0T+Qe8dk=",
+											"_parent": {
+												"$ref": "AAAAAAGa5Iu0T+Qc8iA="
+											},
+											"lineColor": "#00509e",
+											"fillColor": "#f0f8ff",
+											"fontColor": "#212121",
+											"font": "Times New Roman;20;1",
+											"parentStyle": true,
+											"left": 997,
+											"top": 1383,
+											"width": 157.26953125,
+											"height": 20,
+											"text": "CClientController"
+										},
+										{
+											"_type": "LabelView",
+											"_id": "AAAAAAGa5Iu0T+QfF+0=",
+											"_parent": {
+												"$ref": "AAAAAAGa5Iu0T+Qc8iA="
+											},
+											"visible": false,
+											"lineColor": "#00509e",
+											"fillColor": "#f0f8ff",
+											"fontColor": "#212121",
+											"font": "Times New Roman;20;0",
+											"parentStyle": true,
+											"left": -536,
+											"top": -202,
+											"width": 168.291015625,
+											"height": 20,
+											"text": "(from RemoteClient)"
+										},
+										{
+											"_type": "LabelView",
+											"_id": "AAAAAAGa5Iu0T+QgfR8=",
+											"_parent": {
+												"$ref": "AAAAAAGa5Iu0T+Qc8iA="
+											},
+											"visible": false,
+											"lineColor": "#00509e",
+											"fillColor": "#f0f8ff",
+											"fontColor": "#212121",
+											"font": "Times New Roman;20;0",
+											"parentStyle": true,
+											"left": -536,
+											"top": -202,
+											"height": 20,
+											"horizontalAlignment": 1
+										}
+									],
+									"lineColor": "#00509e",
+									"fillColor": "#f0f8ff",
+									"fontColor": "#212121",
+									"font": "Times New Roman;20;0",
+									"parentStyle": true,
+									"left": 992,
+									"top": 1376,
+									"width": 167.26953125,
+									"height": 32,
+									"stereotypeLabel": {
+										"$ref": "AAAAAAGa5Iu0T+QdhhM="
+									},
+									"nameLabel": {
+										"$ref": "AAAAAAGa5Iu0T+Qe8dk="
+									},
+									"namespaceLabel": {
+										"$ref": "AAAAAAGa5Iu0T+QfF+0="
+									},
+									"propertyLabel": {
+										"$ref": "AAAAAAGa5Iu0T+QgfR8="
+									}
+								},
+								{
+									"_type": "UMLAttributeCompartmentView",
+									"_id": "AAAAAAGa5Iu0T+QhFjA=",
+									"_parent": {
+										"$ref": "AAAAAAGa5Iu0T+QbLUo="
+									},
+									"model": {
+										"$ref": "AAAAAAGa5IuIUOPXClI="
+									},
+									"lineColor": "#00509e",
+									"fillColor": "#f0f8ff",
+									"fontColor": "#212121",
+									"font": "Times New Roman;20;0",
+									"parentStyle": true,
+									"left": 992,
+									"top": 1408,
+									"width": 167.26953125,
+									"height": 10
+								},
+								{
+									"_type": "UMLOperationCompartmentView",
+									"_id": "AAAAAAGa5Iu0T+QiFoY=",
+									"_parent": {
+										"$ref": "AAAAAAGa5Iu0T+QbLUo="
+									},
+									"model": {
+										"$ref": "AAAAAAGa5IuIUOPXClI="
+									},
+									"subViews": [
+										{
+											"_type": "UMLOperationView",
+											"_id": "AAAAAAGa5JqToe+XQIY=",
+											"_parent": {
+												"$ref": "AAAAAAGa5Iu0T+QiFoY="
+											},
+											"model": {
+												"$ref": "AAAAAAGa5JqTmO9/D2Q="
+											},
+											"lineColor": "#00509e",
+											"fillColor": "#f0f8ff",
+											"fontColor": "#212121",
+											"font": "Times New Roman;20;0",
+											"parentStyle": true,
+											"left": 997,
+											"top": 1423,
+											"width": 157.26953125,
+											"height": 20,
+											"text": "+InitController()",
+											"horizontalAlignment": 0
+										},
+										{
+											"_type": "UMLOperationView",
+											"_id": "AAAAAAGa5JqUdfBa7eo=",
+											"_parent": {
+												"$ref": "AAAAAAGa5Iu0T+QiFoY="
+											},
+											"model": {
+												"$ref": "AAAAAAGa5JqUbfBCncY="
+											},
+											"lineColor": "#00509e",
+											"fillColor": "#f0f8ff",
+											"fontColor": "#212121",
+											"font": "Times New Roman;20;0",
+											"parentStyle": true,
+											"left": 997,
+											"top": 1445,
+											"width": 157.26953125,
+											"height": 20,
+											"text": "+Invoke()",
+											"horizontalAlignment": 0
+										},
+										{
+											"_type": "UMLOperationView",
+											"_id": "AAAAAAGa5JqYmvEdZY8=",
+											"_parent": {
+												"$ref": "AAAAAAGa5Iu0T+QiFoY="
+											},
+											"model": {
+												"$ref": "AAAAAAGa5JqYk/EFwV0="
+											},
+											"lineColor": "#00509e",
+											"fillColor": "#f0f8ff",
+											"fontColor": "#212121",
+											"font": "Times New Roman;20;0",
+											"parentStyle": true,
+											"left": 997,
+											"top": 1467,
+											"width": 157.26953125,
+											"height": 20,
+											"text": "+StartWatch()",
+											"horizontalAlignment": 0
+										},
+										{
+											"_type": "UMLOperationView",
+											"_id": "AAAAAAGa5JqZnfHgISE=",
+											"_parent": {
+												"$ref": "AAAAAAGa5Iu0T+QiFoY="
+											},
+											"model": {
+												"$ref": "AAAAAAGa5JqZlfHIjvM="
+											},
+											"lineColor": "#00509e",
+											"fillColor": "#f0f8ff",
+											"fontColor": "#212121",
+											"font": "Times New Roman;20;0",
+											"parentStyle": true,
+											"left": 997,
+											"top": 1489,
+											"width": 157.26953125,
+											"height": 20,
+											"text": "+ShowStatusDlg()",
+											"horizontalAlignment": 0
+										},
+										{
+											"_type": "UMLOperationView",
+											"_id": "AAAAAAGa5JqdAfKjH9I=",
+											"_parent": {
+												"$ref": "AAAAAAGa5Iu0T+QiFoY="
+											},
+											"model": {
+												"$ref": "AAAAAAGa5Jqc+/KLquA="
+											},
+											"lineColor": "#00509e",
+											"fillColor": "#f0f8ff",
+											"fontColor": "#212121",
+											"font": "Times New Roman;20;0",
+											"parentStyle": true,
+											"left": 997,
+											"top": 1511,
+											"width": 157.26953125,
+											"height": 20,
+											"text": "+threadMsgProc()",
+											"horizontalAlignment": 0
+										}
+									],
+									"lineColor": "#00509e",
+									"fillColor": "#f0f8ff",
+									"fontColor": "#212121",
+									"font": "Times New Roman;20;0",
+									"parentStyle": true,
+									"left": 992,
+									"top": 1418,
+									"width": 167.26953125,
+									"height": 118
+								},
+								{
+									"_type": "UMLReceptionCompartmentView",
+									"_id": "AAAAAAGa5Iu0T+QjZOA=",
+									"_parent": {
+										"$ref": "AAAAAAGa5Iu0T+QbLUo="
+									},
+									"model": {
+										"$ref": "AAAAAAGa5IuIUOPXClI="
+									},
+									"visible": false,
+									"lineColor": "#00509e",
+									"fillColor": "#f0f8ff",
+									"fontColor": "#212121",
+									"font": "Times New Roman;20;0",
+									"parentStyle": true,
+									"left": -268,
+									"top": -101,
+									"width": 10,
+									"height": 10
+								},
+								{
+									"_type": "UMLTemplateParameterCompartmentView",
+									"_id": "AAAAAAGa5Iu0T+Qku7g=",
+									"_parent": {
+										"$ref": "AAAAAAGa5Iu0T+QbLUo="
+									},
+									"model": {
+										"$ref": "AAAAAAGa5IuIUOPXClI="
+									},
+									"visible": false,
+									"lineColor": "#00509e",
+									"fillColor": "#f0f8ff",
+									"fontColor": "#212121",
+									"font": "Times New Roman;20;0",
+									"parentStyle": true,
+									"left": -268,
+									"top": -101,
+									"width": 10,
+									"height": 10
+								}
+							],
+							"lineColor": "#00509e",
+							"fillColor": "#f0f8ff",
+							"fontColor": "#212121",
+							"font": "Times New Roman;20;0",
+							"parentStyle": false,
+							"containerChangeable": true,
+							"left": 992,
+							"top": 1376,
+							"width": 166.26953125,
+							"height": 160,
+							"nameCompartment": {
+								"$ref": "AAAAAAGa5Iu0T+Qc8iA="
+							},
+							"attributeCompartment": {
+								"$ref": "AAAAAAGa5Iu0T+QhFjA="
+							},
+							"operationCompartment": {
+								"$ref": "AAAAAAGa5Iu0T+QiFoY="
+							},
+							"receptionCompartment": {
+								"$ref": "AAAAAAGa5Iu0T+QjZOA="
+							},
+							"templateParameterCompartment": {
+								"$ref": "AAAAAAGa5Iu0T+Qku7g="
 							}
 						}
 					]
@@ -23597,6 +23920,56 @@
 									"direction": "return"
 								}
 							]
+						}
+					]
+				},
+				{
+					"_type": "UMLClass",
+					"_id": "AAAAAAGa5IuIUOPXClI=",
+					"_parent": {
+						"$ref": "AAAAAAGa2JzPFkQ2bII="
+					},
+					"name": "CClientController",
+					"operations": [
+						{
+							"_type": "UMLOperation",
+							"_id": "AAAAAAGa5JqTmO9/D2Q=",
+							"_parent": {
+								"$ref": "AAAAAAGa5IuIUOPXClI="
+							},
+							"name": "InitController"
+						},
+						{
+							"_type": "UMLOperation",
+							"_id": "AAAAAAGa5JqUbfBCncY=",
+							"_parent": {
+								"$ref": "AAAAAAGa5IuIUOPXClI="
+							},
+							"name": "Invoke"
+						},
+						{
+							"_type": "UMLOperation",
+							"_id": "AAAAAAGa5JqYk/EFwV0=",
+							"_parent": {
+								"$ref": "AAAAAAGa5IuIUOPXClI="
+							},
+							"name": "StartWatch"
+						},
+						{
+							"_type": "UMLOperation",
+							"_id": "AAAAAAGa5JqZlfHIjvM=",
+							"_parent": {
+								"$ref": "AAAAAAGa5IuIUOPXClI="
+							},
+							"name": "ShowStatusDlg"
+						},
+						{
+							"_type": "UMLOperation",
+							"_id": "AAAAAAGa5Jqc+/KLquA=",
+							"_parent": {
+								"$ref": "AAAAAAGa5IuIUOPXClI="
+							},
+							"name": "threadMsgProc"
 						}
 					]
 				}
