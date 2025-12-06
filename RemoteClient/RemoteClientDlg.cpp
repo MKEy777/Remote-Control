@@ -58,7 +58,8 @@ CRemoteClientDlg::CRemoteClientDlg(CWnd* pParent /*=nullptr*/)
 	, m_serv_address(0)
 	, m_nPort(_T(""))
 {
-	m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	//m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	m_hIcon = NULL;
 }
 
 void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
@@ -215,7 +216,10 @@ END_MESSAGE_MAP()
 BOOL CRemoteClientDlg::OnInitDialog()
 {
 	CDialogEx::OnInitDialog();
-
+	if (m_hIcon == NULL)
+	{
+		m_hIcon = AfxGetApp()->LoadIcon(IDR_MAINFRAME);
+	}
 	// Add "About..." menu item to system menu.
 
 	// IDM_ABOUTBOX must be in the system command range.
@@ -396,7 +400,6 @@ void CRemoteClientDlg::OnDownloadFile()
 		MessageBox(_T("下载失败！"));
 		TRACE("下载失败 ret = %d\r\n", ret);
 	}
-	
 }
 
 //删除文件

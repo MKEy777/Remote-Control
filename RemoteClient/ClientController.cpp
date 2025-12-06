@@ -15,13 +15,14 @@ CClientController* CClientController::getInstance()
 			{WM_SHOW_STATUS,&CClientController::OnShowStatus},
 			{WM_SHOW_WATCH,&CClientController::OnShowWatcher},
 			{WM_SEND_DATA,&CClientController::OnSendData},
+			{WM_SEND_PACK, &CClientController::OnSendPacket},
 			{(UINT)-1,NULL}
 		};
 		for (int i = 0; MsgFuncs[i].func != NULL; i++) {
 			m_mapFunc.insert(std::pair<UINT, MSGFUNC>(MsgFuncs[i].nMsg, MsgFuncs[i].func));
 		}
 	}
-	return nullptr;
+	return m_instance;
 }
 
 int CClientController::initController()
@@ -29,6 +30,7 @@ int CClientController::initController()
 	m_hThread = (HANDLE)_beginthreadex(NULL, 0,
 		&CClientController::threadEntry,
 		this, 0, &m_nThreadID);//创建接收线程
+	CClientSocket::GetInstance()->SetThreadID(m_nThreadID);
 	m_statusDlg.Create(IDD_DLG_STATUS, &m_remoteDlg);
 	return 0;
 }
@@ -64,6 +66,13 @@ bool CClientController::SendCommandPacket(HWND hWnd, int nCmd, bool bAutoClose, 
 	return ret;
 }
 
+void CClientController::DownloadEnd()
+{
+	m_statusDlg.ShowWindow(SW_HIDE);
+	m_remoteDlg.EndWaitCursor();
+	m_remoteDlg.MessageBox(_T("下载完成！！"), _T("完成"));
+}
+
 int CClientController::DownFile(CString strPath)
 {
 	CFileDialog dlg(
@@ -87,6 +96,45 @@ int CClientController::DownFile(CString strPath)
 		m_statusDlg.SetActiveWindow();
 	}
 	return 0;
+}
+
+void CClientController::StartWatchScreen()
+{
+	m_isClosed = false;
+	m_hThreadWatch = (HANDLE)_beginthread(&CClientController::threadWatchScreen, 0, this);
+	m_watchDlg.DoModal();
+	m_isClosed = true;
+	WaitForSingleObject(m_hThreadWatch, 500);
+}
+
+void CClientController::threadWatchScreen()
+{
+	Sleep(50);
+	ULONGLONG nTick = GetTickCount64();
+	while (!m_isClosed) {
+		if (m_watchDlg.isFull() == false) {
+			if (GetTickCount64() - nTick < 200) {
+				Sleep(200 - DWORD(GetTickCount64() - nTick));
+			}
+			nTick = GetTickCount64();
+			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(), 6, true, NULL, 0);
+			if (ret == 1) {
+				//TRACE("成功发送请求图片命令\r\n");
+			}
+			else {
+				TRACE("获取图片失败！ret = %d\r\n", ret);
+			}
+		}
+		Sleep(1);
+	}
+	TRACE("thread end %d\r\n", m_isClosed);
+}
+
+void CClientController::threadWatchScreen(void* arg)
+{
+	CClientController* thiz = (CClientController*)arg;
+	thiz->threadWatchScreen();
+	_endthread();
 }
 
 void CClientController::threadFunc()

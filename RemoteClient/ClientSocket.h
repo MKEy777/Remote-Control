@@ -289,6 +289,7 @@ public:
 		m_nIP = nIP;
 		m_nPort = nPort;
 	}
+	void SetThreadID(UINT id) { m_nThreadID = id; }
 
 private:
 	HANDLE m_eventInvoke;//Æô¶¯ÊÂ¼þ

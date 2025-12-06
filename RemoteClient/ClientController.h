@@ -61,10 +61,16 @@ public:
 		CClientSocket* pClient = CClientSocket::GetInstance();
 		return Tool::Bytes2Image(image, pClient->GetPacket().strData);
 	}
+	void DownloadEnd();
 	int DownFile(CString strPath);
+	void StartWatchScreen();
 protected:
+	void threadWatchScreen();
+	static void threadWatchScreen(void* arg);
 	CClientController():m_statusDlg(&m_remoteDlg),m_watchDlg(&m_remoteDlg)
 	{
+		m_isClosed = true;
+		m_hThreadWatch = INVALID_HANDLE_VALUE;
 		m_hThread = INVALID_HANDLE_VALUE;
 		m_nThreadID = -1;
 	}
@@ -88,6 +94,20 @@ protected:
 	LRESULT OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT OnShowWatcher(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam);
+	LRESULT CClientController::OnSendPacket(UINT nMsg, WPARAM wParam, LPARAM lParam)
+	{
+		// 这里负责在工作线程中真正发送数据
+		// wParam 是 SendPacket 中 new 出来的 PACKET_DATA 指针
+		PACKET_DATA* pData = (PACKET_DATA*)wParam;
+		if (pData != nullptr) {
+			// 调用 Socket 发送原始数据
+			CClientSocket::GetInstance()->Send(pData->strData.c_str(), pData->strData.size());
+
+			// 【重要】使用完后必须删除，否则会导致内存泄漏
+			delete pData;
+		}
+		return 0;
+	}
 private:
 	//消息信息结构体 
 	typedef struct MsgInfo {
@@ -115,13 +135,14 @@ private:
 	CWatchDialog m_watchDlg;//远程监控对话框
 	CRemoteClientDlg m_remoteDlg;//远程客户端对话框
 	CStatusDlg m_statusDlg;//状态对话框
+	HANDLE m_hThread;
+	HANDLE m_hThreadWatch;
 	bool m_isClosed;//监视是否关闭
 	//下载文件的远程路径
 	CString m_strRemote;
 	//下载文件的本地保存路径
 	CString m_strLocal;
 	static CClientController* m_instance;
-	HANDLE m_hThread;
 	unsigned m_nThreadID;
 
 	class CHelper {
