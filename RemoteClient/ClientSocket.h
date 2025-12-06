@@ -6,6 +6,9 @@
 #include <vector>
 #include <afxsock.h>
 
+#define WM_SEND_PACK (WM_USER+1) //发送包数据
+#define WM_SEND_PACK_ACK (WM_USER+2) //发送包数据应答
+
 class CPacket {
 public:
 	CPacket() :sHead(0), nLength(0), sCmd(0), strData(""), sSum(0) {}
@@ -107,7 +110,7 @@ public:
 	int Size() {//包数据的大小
 		return nLength + 6;
 	}
-	const char* Data() {
+	const char* Data(std::string& strOut) const {
 		strOut.resize(nLength + 6);
 		BYTE* pData = (BYTE*)&strOut[0];
 		*(WORD*)pData = sHead; pData += 2;
@@ -122,7 +125,7 @@ public:
 	WORD sCmd;          //命令字
 	std::string strData;//数据
 	WORD sSum;          //校验和
-	std::string strOut;//整个包的数据
+	//std::string strOut;//整个包的数据
 };
 typedef struct MouseEvent {
 	MouseEvent() {
@@ -148,7 +151,34 @@ typedef struct file_info {
 	char szFileName[256];//文件名
 }FILEINFO, * PFILEINFO;
 
+enum {
+	CSM_AUTOCLOSE = 1,//CSM = Client Socket Mode 自动关闭模式
+};
 
+typedef struct PacketData {
+	std::string strData;
+	UINT nMode;
+	WPARAM wParam;
+	PacketData(const char* pData, size_t nLen, UINT mode, WPARAM nParam = 0) {
+		strData.resize(nLen);
+		memcpy((char*)strData.c_str(), pData, nLen);
+		nMode = mode;
+		wParam = nParam;
+	}
+	PacketData(const PacketData& data) {
+		strData = data.strData;
+		nMode = data.nMode;
+		wParam = data.wParam;
+	}
+	PacketData& operator=(const PacketData& data) {
+		if (this != &data) {
+			strData = data.strData;
+			nMode = data.nMode;
+			wParam = data.wParam;
+		}
+		return *this;
+	}
+}PACKET_DATA;
 std::string GetErrInfo(int wsaErrcode);
 
 class CClientSocket//单例模式
@@ -160,7 +190,7 @@ public:
 		}
 		return m_instance;
 	}
-	bool InitSocket(int nIP,int nPort) {
+	bool InitSocket() {
 		if (m_sock != -1) CloseSocket();
 		m_sock = socket(PF_INET, SOCK_STREAM, 0);
 		if (m_sock == -1) return false;
@@ -168,8 +198,8 @@ public:
 		sockaddr_in ser_adr;
 		memset(&ser_adr, 0, sizeof(ser_adr));
 		ser_adr.sin_family = AF_INET;
-		ser_adr.sin_addr.s_addr =nIP;
-		ser_adr.sin_port = htons(nPort);
+		ser_adr.sin_addr.s_addr =m_nIP;
+		ser_adr.sin_port = htons(m_nPort);
 
 		int ret = connect(m_sock, (sockaddr*)&ser_adr, sizeof(ser_adr)); // 连接服务器；(套接字，地址结构体指针，结构体大小)
 		if (ret == -1) {
@@ -220,30 +250,17 @@ public:
 		}
 		return -1;
 	}
+	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed, WPARAM wParam);
 	bool Send(const char* pData, int nSize) {
 		if (m_sock == -1) return false;
 		return send(m_sock, pData, nSize, 0) > 0;
 	}
-	bool Send(const CPacket& packet) {// 发送CPacket数据包
-		if (m_sock == -1) return false;
-		size_t nSize = 6 + packet.nLength; // 包头(2) + 长度(4) + 命令(2) + 数据 + 校验(2)
-		BYTE* pData = new BYTE[nSize];
-		// ① 包头
-		*(WORD*)(pData) = packet.sHead;
-		// ② 长度
-		*(DWORD*)(pData + 2) = packet.nLength;
-		// ③ 命令
-		*(WORD*)(pData + 6) = packet.sCmd;
-		// ④ 数据体
-		if (packet.nLength > 4)
-		{
-			memcpy(pData + 8, packet.strData.c_str(), packet.nLength - 4);
-		}
-		// ⑤ 校验码
-		*(WORD*)(pData + 4 + packet.nLength) = packet.sSum;
-		bool bRet = send(m_sock, (const char*)pData, nSize, 0) > 0;
-		delete[] pData;
-		return bRet;
+	bool Send(const CPacket& pack) {// 发送CPacket数据包
+		TRACE("m_sock = =%d\r\n", m_sock);
+		if (m_sock == -1)return false;
+		std::string strOut;
+		pack.Data(strOut);
+		return send(m_sock, strOut.c_str(), strOut.length(), 0) > 0;
 	}
 	bool GetFilePath(std::string& strPath) {
 		if (m_packet.sCmd >= 2 && m_packet.sCmd <= 4) {
@@ -268,8 +285,16 @@ public:
 	CPacket& GetPacket() {
 		return m_packet;
 	}
+	void UpdateAddress(int nIP, int nPort) {
+		m_nIP = nIP;
+		m_nPort = nPort;
+	}
 
 private:
+	HANDLE m_eventInvoke;//启动事件
+	UINT m_nThreadID;
+	int m_nIP;
+	int m_nPort;
 	std::vector<char> m_buffer;
 	size_t m_index = 0; // 记录缓冲区当前有效数据长度
 	SOCKET m_sock = INVALID_SOCKET;
@@ -281,6 +306,8 @@ private:
 			MessageBoxA(NULL, "无法初始化套接字环境,请检查网络设置", "初始化错误", MB_OK | MB_ICONERROR);
 			exit(0);
 		}
+		m_nIP = (INADDR_ANY);
+		m_nPort = 0;
 		m_buffer.resize(BUFFER_SIZE);
 		m_index = 0;
 		m_sock = INVALID_SOCKET;

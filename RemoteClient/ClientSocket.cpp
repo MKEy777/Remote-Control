@@ -17,3 +17,16 @@ std::string GetErrInfo(int wsaErrcode) {
 	LocalFree(lpMsgBuf);
 	return ret;
 }
+
+bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed, WPARAM wParam)
+{
+	UINT nMode = isAutoClosed ? CSM_AUTOCLOSE : 0;
+	std::string strOut;
+	pack.Data(strOut);
+	PACKET_DATA* pData = new PACKET_DATA(strOut.c_str(), strOut.size(), nMode, wParam);
+	bool ret = PostThreadMessage(m_nThreadID, WM_SEND_PACK, (WPARAM)pData, (LPARAM)hWnd);
+	if (ret == false) {
+		delete pData;
+	}
+	return ret;
+}

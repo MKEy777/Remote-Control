@@ -1,5 +1,6 @@
 #include "pch.h"
 #include "ClientController.h"
+#include "ClientSocket.h"
 
 std::map<UINT, CClientController::MSGFUNC> CClientController::m_mapFunc;
 CClientController* CClientController::m_instance = NULL;
@@ -13,7 +14,6 @@ CClientController* CClientController::getInstance()
 		struct { UINT nMsg; MSGFUNC func; }MsgFuncs[] = {
 			{WM_SHOW_STATUS,&CClientController::OnShowStatus},
 			{WM_SHOW_WATCH,&CClientController::OnShowWatcher},
-			{WM_SEND_PACKET,&CClientController::OnSendPacket},
 			{WM_SEND_DATA,&CClientController::OnSendData},
 			{(UINT)-1,NULL}
 		};
@@ -52,6 +52,41 @@ LRESULT CClientController::SendMessage(MSG msg)
 		(LPARAM)&hEvent);
 	WaitForSingleObject(hEvent, -1);
 	return info.result;
+}
+
+
+
+bool CClientController::SendCommandPacket(HWND hWnd, int nCmd, bool bAutoClose, BYTE* pData, size_t nLength, WPARAM wParam)
+{
+	TRACE("cmd:%d %s start %lld \r\n", nCmd, __FUNCTION__, GetTickCount64());
+	CClientSocket* pClient = CClientSocket::GetInstance();
+	bool ret = pClient->SendPacket(hWnd, CPacket(nCmd, pData, nLength), bAutoClose, wParam);
+	return ret;
+}
+
+int CClientController::DownFile(CString strPath)
+{
+	CFileDialog dlg(
+		FALSE, NULL,
+		strPath, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
+		NULL, &m_remoteDlg);
+	if (dlg.DoModal() == IDOK) {
+		m_strRemote = strPath;
+		m_strLocal = dlg.GetPathName();
+		FILE* pFile = nullptr;
+		errno_t err = fopen_s(&pFile, m_strLocal, "wb+");
+		if (err != 0 || pFile == nullptr) {
+			AfxMessageBox(_T("本地没有权限保存该文件，或者文件无法创建！！！"));
+			return -1;
+		}
+		SendCommandPacket(m_remoteDlg, 4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength(), (WPARAM)pFile);
+		m_remoteDlg.BeginWaitCursor();
+		m_statusDlg.m_info.SetWindowText(_T("命令正在执行中！"));
+		m_statusDlg.ShowWindow(SW_SHOW);
+		m_statusDlg.CenterWindow(&m_remoteDlg);
+		m_statusDlg.SetActiveWindow();
+	}
+	return 0;
 }
 
 void CClientController::threadFunc()
@@ -101,12 +136,11 @@ LRESULT CClientController::OnShowWatcher(UINT nMsg, WPARAM wParam, LPARAM lParam
 	return m_watchDlg.DoModal();
 }
 
-LRESULT CClientController::OnSendPacket(UINT nMsg, WPARAM wParam, LPARAM lParam)
-{
-	return 0;
-}
+
 
 LRESULT CClientController::OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
-	return LRESULT();
+	CClientSocket* pClient = CClientSocket::GetInstance();
+	char* pBuffer = (char*)wParam;
+	return pClient->Send(pBuffer, (int)lParam);
 }
