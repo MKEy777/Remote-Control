@@ -183,6 +183,7 @@
     </ResourceCompile>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClInclude Include="ClientController.h" />
     <ClInclude Include="ClientSocket.h" />
     <ClInclude Include="CWatchDialog.h" />
     <ClInclude Include="StatusDlg.h" />
@@ -192,8 +193,10 @@
     <ClInclude Include="RemoteClientDlg.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Tool.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="ClientController.cpp" />
     <ClCompile Include="ClientSocket.cpp" />
     <ClCompile Include="CStatusDlg.cpp" />
     <ClCompile Include="CWatchDialog.cpp" />
