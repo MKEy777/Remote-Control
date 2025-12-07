@@ -291,6 +291,25 @@ LRESULT CClientController::OnDownloadEnd(UINT nMsg, WPARAM wParam, LPARAM lParam
 
 	return 0;
 }
+int CClientController::SafeCopyFileInfo(PFILEINFO pDestInfo, const std::string& packetData)
+{
+	if (packetData.size() < sizeof(FILEINFO)) {
+		return -1;
+	}
+
+	// 1. 缓冲区安全复制
+	memcpy(pDestInfo, packetData.c_str(), sizeof(FILEINFO));
+
+	// 2. 字符串安全加固
+	pDestInfo->szFileName[sizeof(pDestInfo->szFileName) - 1] = '\0';
+
+	// 检查是否是服务器发送的结束标记包
+	if (pDestInfo->HasNext == FALSE) {
+		return -1; // -1 表示数据流结束或错误
+	}
+
+	return 0; // 成功获取有效数据
+}
 int CClientController::LoadDiskDrivers(CRemoteClientDlg* pView)
 {
 	// 1. Controller 调用 Model 发送请求 (命令 1)
@@ -342,10 +361,10 @@ int CClientController::LoadDiskDrivers(CRemoteClientDlg* pView)
 // Controller：加载指定目录下的文件 (View -> Model -> View)
 int CClientController::LoadDirectory(CRemoteClientDlg* pView, HTREEITEM hTree, CString strPath)
 {
-	// 1. Controller 清理 View 控件
+	// 1. Controller 清理 View 控件 
 	pView->m_List.DeleteAllItems();
 	if (hTree != NULL && pView->m_Tree.GetChildItem(hTree) != NULL) {
-		pView->DeleteTreeChildrenItem(hTree);
+		pView->DeleteTreeChildrenItem(hTree); // 假设 DeleteTreeChildrenItem 存在
 	}
 
 	// 2. Controller 调用 Model 发送请求 (命令 2)
@@ -355,37 +374,44 @@ int CClientController::LoadDirectory(CRemoteClientDlg* pView, HTREEITEM hTree, C
 		return -1;
 	}
 
-	// 3. Controller 调用 Model 处理网络数据，并执行 View 更新
-	CClientSocket* pClient = CClientSocket::GetInstance(); // Model 依赖
-	PFILEINFO pInfo = (PFILEINFO)pClient->GetPacket().strData.c_str();
+	CClientSocket* pClient = CClientSocket::GetInstance();
 
-	// 注意：PFILEINFO 定义在 Packet.h 中，此处假设其可见
+	// 【安全修复 1.1：引入本地安全结构体】
+	FILEINFO currentInfo;
+	PFILEINFO pInfo = &currentInfo;
+
+	// 【安全修复 1.2：第一次数据获取 - 复制到本地并强制空终止符】
+	const std::string& firstPacketData = pClient->GetPacket().strData;
+	// 复制数据到本地安全内存
+	memcpy(pInfo, firstPacketData.c_str(), sizeof(FILEINFO));
+	// 强制空终止符，解决 CString 访问越界问题
+	pInfo->szFileName[sizeof(pInfo->szFileName) - 1] = '\0';
+
+
+	// PFILEINFO 结构体定义在 Packet.h
 	while (pInfo->HasNext) {
-		// Controller 指示 View 更新界面 (Tree/List)
-		if (pInfo->IsDirectory) {
-			if (CString(pInfo->szFileName) == "." || (CString(pInfo->szFileName) == ".."))
-			{
-				int cmd = m_pModel->DealCommand();
-				if (cmd < 0) break;
-				pInfo = (PFILEINFO)pClient->GetPacket().strData.c_str();
-				continue;
-			}
-			// 插入子目录到 Tree 控件
-			HTREEITEM hTemp = pView->m_Tree.InsertItem(pInfo->szFileName, hTree, TVI_LAST);
-			pView->m_Tree.InsertItem("", hTemp, TVI_LAST);
-		}
-		else {
-			// 插入文件到 List 控件
-			pView->m_List.InsertItem(0, pInfo->szFileName);
-		}
+		// CController 调用 Dlg 的 UpdateFileInfo 来处理 UI 逻辑
+		pView->UpdateFileInfo(currentInfo, hTree);
 
-		// Controller 调用 Model 继续处理下一个命令
+		// Controller 调用 Model 继续处理下一个命令，这会覆盖共享缓冲区
 		int cmd = m_pModel->DealCommand();
 		if (cmd < 0) break;
-		pInfo = (PFILEINFO)pClient->GetPacket().strData.c_str();
+
+		// 【安全修复 1.3：获取下一个包 - 复制到本地并强制空终止符】
+		const std::string& nextPacketData = pClient->GetPacket().strData;
+		// 复制数据到本地安全内存，替代原有的指针赋值
+		memcpy(pInfo, nextPacketData.c_str(), sizeof(FILEINFO));
+		// 强制空终止符
+		pInfo->szFileName[sizeof(pInfo->szFileName) - 1] = '\0';
 	}
+
+	// 循环结束后，强制展开父节点以刷新 UI
+	if (hTree != NULL) {
+		pView->m_Tree.Expand(hTree, TVE_EXPAND);
+	}
+
 	m_pModel->CloseSocket(); // 关闭 Socket
-	return 0;
+	return 0;;
 }
 
 // Controller：删除文件 (View -> Model -> View)

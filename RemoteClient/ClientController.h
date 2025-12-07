@@ -76,6 +76,7 @@ public:
 	int StartDownload(CString strPath);
 
 	// 文件操作 View -> Controller -> Model (新增)
+	int SafeCopyFileInfo(PFILEINFO pDestInfo, const std::string& packetData);
 	int LoadDiskDrivers(CRemoteClientDlg* pView);
 	int LoadDirectory(CRemoteClientDlg* pView, HTREEITEM hTree, CString strPath);
 	int CClientController::RemoveFile(CString strPath, int nSelected, CRemoteClientDlg* pView);

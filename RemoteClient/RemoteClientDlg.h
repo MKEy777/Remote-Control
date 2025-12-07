@@ -36,6 +36,9 @@ public:
 	void DeleteTreeChildrenItem(HTREEITEM hTree);
 	CTreeCtrl m_Tree;
 	CListCtrl m_List;
+	void LoadFileCurrent();
+	void Str2Tree(const std::string& drivers, CTreeCtrl& tree);
+	void UpdateFileInfo(const FILEINFO& finfo, HTREEITEM hParent);
 	// Connection & Test
 	afx_msg void OnBnClickedBtnTest();
 	DWORD m_serv_address;

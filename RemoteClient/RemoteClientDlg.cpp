@@ -216,7 +216,60 @@ void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
     // Controller 负责网络通信、解析数据、并指示 View 更新 m_List 和 m_Tree
 	CClientController::getInstance()->LoadDirectory(this, hTree, strPath);
 }
-
+void CRemoteClientDlg::LoadFileCurrent()
+{
+	HTREEITEM hTree = m_Tree.GetSelectedItem();
+	CString strPath = GetPath(hTree);
+	m_List.DeleteAllItems();
+	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	PFILEINFO pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
+	while (pInfo->HasNext) {
+		TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
+		if (!pInfo->IsDirectory) {
+			m_List.InsertItem(0, pInfo->szFileName);
+		}
+		int cmd = CClientController::getInstance()->DealCommand();
+		TRACE("ack:%d\r\n", cmd);
+		if (cmd < 0)break;
+		pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
+	}
+}
+void CRemoteClientDlg::Str2Tree(const std::string& drivers, CTreeCtrl& tree)
+{
+	std::string dr;
+	tree.DeleteAllItems();
+	for (size_t i = 0; i < drivers.size(); i++)
+	{
+		if (drivers[i] == ',') {
+			dr += ":";
+			HTREEITEM hTemp = tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			tree.InsertItem("", hTemp, TVI_LAST);
+			dr.clear();
+			continue;
+		}
+		dr += drivers[i];
+	}
+	if (dr.size() > 0) {
+		dr += ":";
+		HTREEITEM hTemp = tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+		tree.InsertItem("", hTemp, TVI_LAST);
+	}
+}
+void CRemoteClientDlg::UpdateFileInfo(const FILEINFO& finfo, HTREEITEM hParent) {
+	TRACE("hasnext %d isdirectory %d %s\r\n", finfo.HasNext, finfo.IsDirectory, finfo.szFileName);
+	if (finfo.HasNext == FALSE)return;
+	if (finfo.IsDirectory) {
+		if (CString(finfo.szFileName) == "." || (CString(finfo.szFileName) == ".."))
+			return;
+		TRACE("hselected %08X %08X\r\n", hParent, m_Tree.GetSelectedItem());
+		HTREEITEM hTemp = m_Tree.InsertItem(finfo.szFileName, hParent);
+		m_Tree.InsertItem("", hTemp, TVI_LAST);
+		m_Tree.Expand(hParent, TVE_EXPAND);
+	}
+	else {
+		m_List.InsertItem(0, finfo.szFileName);
+	}
+}
 void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	*pResult = 0;
@@ -314,11 +367,7 @@ void CRemoteClientDlg::OnRunFile()
 // 自定义消息响应函数 (View -> Controller 转发)
 LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 {
-	// **此方法原先包含大量的命令号判断和逻辑，现在应简化为转发给 Controller**
-	
-	// 由于这个消息是线程间通信的桥梁，我们将转发给 Controller 的通用消息处理。
-	// 但鉴于此处的实现依赖特定的结构体和命令号，我们暂时保持原有的 SendCommandPacket 调用，
-	// 只是调用的是 CClientController 的 SendCommandPacket。
+
 
 	int ret = 0;
 	int cmd = wParam >> 1;
