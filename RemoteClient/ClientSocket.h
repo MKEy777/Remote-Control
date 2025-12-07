@@ -6,7 +6,7 @@
 #include <vector>
 #include <afxsock.h>
 
-#define WM_SEND_PACK (WM_USER+1) //发送包数据
+#define WM_SEND_PACK (WM_USER + 5) 
 #define WM_SEND_PACK_ACK (WM_USER+2) //发送包数据应答
 
 class CPacket {

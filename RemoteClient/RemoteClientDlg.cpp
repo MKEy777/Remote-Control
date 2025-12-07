@@ -71,106 +71,6 @@ void CRemoteClientDlg::DoDataExchange(CDataExchange* pDX)
 	DDX_Control(pDX, IDC_LIST_FILE, m_List);
 }
 
-void CRemoteClientDlg::LoadFileCurrent()
-{
-	HTREEITEM hTree = m_Tree.GetSelectedItem();
-	CString strPath = GetPath(hTree);
-	m_List.DeleteAllItems();
-	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
-	PFILEINFO pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
-	CClientSocket* pClient = CClientSocket::GetInstance();
-	while (pInfo->HasNext) {
-		TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
-		if (!pInfo->IsDirectory) {
-			m_List.InsertItem(0, pInfo->szFileName);
-		}
-		int cmd = pClient->DealCommand();
-		TRACE("ack:%d\r\n", cmd);
-		if (cmd < 0)break;
-		pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
-	}
-	pClient->CloseSocket();
-}
-
-void CRemoteClientDlg::threadEntryForWatchData(void* arg)
-{
-	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
-	thiz->threadWatchData();
-	_endthread();
-}
-
-void CRemoteClientDlg::threadWatchData()
-{
-	CClientController* pCtrl = NULL;
-	do {
-		pCtrl = CClientController::getInstance();
-	} while (pCtrl==NULL);
-	while(!m_bStopWatch){
-		if (m_isFull == false) {
-			ULONGLONG tick = GetTickCount64();
-			int ret = pCtrl->SendCommandPacket(GetSafeHwnd(), 6);//发送请求截图命令，使用消息发送方式
-			if (ret == 6) {
-				if(pCtrl->GetImage(m_image)==0){
-					m_isFull = true;
-				}
-			}
-			ULONGLONG elapsed = GetTickCount64() - tick;
-			if (elapsed < 50)
-			{
-				Sleep((DWORD)(50 - elapsed));
-			}
-		}
-		else {
-			Sleep(10);	
-		}
-	}
-}
-
-
-void CRemoteClientDlg::LoadFileInfo()
-{
-	CPoint ptMouse;
-	GetCursorPos(&ptMouse);
-	m_Tree.ScreenToClient(&ptMouse);
-	HTREEITEM hTreeSelected = m_Tree.HitTest(ptMouse, 0);
-	if (hTreeSelected == NULL)
-		return;
-	if (m_Tree.GetChildItem(hTreeSelected) == NULL)
-		return;
-	DeleteTreeChildrenItem(hTreeSelected);
-	m_List.DeleteAllItems();
-	CString strPath = GetPath(hTreeSelected);
-	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
-	PFILEINFO pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
-	CClientSocket* pClient = CClientSocket::GetInstance();
-	int Count = 0;
-	while (pInfo->HasNext) {
-		//TRACE("[%s] isdir %d\r\n", pInfo->szFileName, pInfo->IsDirectory);
-		if (pInfo->IsDirectory) {
-			if (CString(pInfo->szFileName) == "." || (CString(pInfo->szFileName) == ".."))
-			{
-				int cmd = pClient->DealCommand();
-				if (cmd < 0) break;
-				pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
-				continue;
-			}
-			HTREEITEM hTemp = m_Tree.InsertItem(pInfo->szFileName, hTreeSelected, TVI_LAST);
-			m_Tree.InsertItem("", hTemp, TVI_LAST);
-		}
-		else {
-			//DumpDebug("客户端接收", pInfo->szFileName, strlen(pInfo->szFileName));
-			m_List.InsertItem(0, pInfo->szFileName);
-		}
-
-		Count++;
-		int cmd = pClient->DealCommand();
-		if (cmd < 0) break;
-		pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
-	}
-	pClient->CloseSocket();
-	TRACE("Count = %d\r\n", Count);
-}
-
 CString CRemoteClientDlg::GetPath(HTREEITEM hTree)
 {
 	CString strRet, strTmp;
@@ -182,6 +82,7 @@ CString CRemoteClientDlg::GetPath(HTREEITEM hTree)
 	return strRet;
 }
 
+// 辅助函数保留：View 需要清理界面元素
 void CRemoteClientDlg::DeleteTreeChildrenItem(HTREEITEM hTree)
 {
 	HTREEITEM hSub = NULL;
@@ -190,8 +91,6 @@ void CRemoteClientDlg::DeleteTreeChildrenItem(HTREEITEM hTree)
 		if (hSub != NULL)m_Tree.DeleteItem(hSub);
 	} while (hSub != NULL);
 }
-
-
 BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_WM_SYSCOMMAND()
 	ON_WM_PAINT()
@@ -204,7 +103,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_COMMAND(ID_DOWNLOAD_FILE, &CRemoteClientDlg::OnDownloadFile)
 	ON_COMMAND(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
 	ON_COMMAND(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
-	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::OnSendPacket) //注册消息③
+	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::OnSendPacket)
 	ON_BN_CLICKED(IDC_BTN_START_WATCH, &CRemoteClientDlg::OnBnClickedBtnStartWatch)
 	ON_NOTIFY(IPN_FIELDCHANGED, IDC_IPADDRESS_SERV, &CRemoteClientDlg::OnIpnFieldchangedIpaddressServ)
 	ON_EN_CHANGE(IDC_EDIT_PORT, &CRemoteClientDlg::OnEnChangeEditPort)
@@ -252,8 +151,8 @@ BOOL CRemoteClientDlg::OnInitDialog()
 	CClientController* pController = CClientController::getInstance();
 	pController->UpdateAddress(m_serv_address, atoi((LPCTSTR)(m_nPort)));
 	UpdateData(FALSE);
-	m_dlgStatus.Create(IDD_DLG_STATUS, this);
-	m_dlgStatus.ShowWindow(SW_HIDE);
+	//m_dlgStatus.Create(IDD_DLG_STATUS, this);
+	//m_dlgStatus.ShowWindow(SW_HIDE);
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -305,30 +204,31 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 {
 	return static_cast<HCURSOR>(m_hIcon);
 }
-
-void CRemoteClientDlg::OnBnClickedBtnTest()
-{
-	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 1981);
-}
-
-// 树控件单击事件
 void CRemoteClientDlg::OnNMClickTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	*pResult = 0;
-	LoadFileInfo();
+	// 1. View 获取选中项的路径
+	HTREEITEM hTree = m_Tree.GetSelectedItem();
+	if (hTree == NULL) return;
+	CString strPath = GetPath(hTree);
+    
+    // 2. View 转发给 Controller
+    // Controller 负责网络通信、解析数据、并指示 View 更新 m_List 和 m_Tree
+	CClientController::getInstance()->LoadDirectory(this, hTree, strPath);
 }
-// 树控件双击事件
+
 void CRemoteClientDlg::OnNMDblclkTreeDir(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	*pResult = 0;
-	LoadFileInfo();
+	// 与单击事件执行相同的逻辑
+	OnNMClickTreeDir(pNMHDR, pResult);
 }
 
-// 列表控件右键事件
+// 列表控件右键事件 (View 触发，显示菜单)
 void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
 {
+	// 保持不变，View 仅负责菜单显示
 	LPNMITEMACTIVATE pNMItemActivate = reinterpret_cast<LPNMITEMACTIVATE>(pNMHDR);
-	// TODO: 在此添加控件通知处理程序代码
 	*pResult = 0;
 	CPoint ptMouse, ptList;
 	GetCursorPos(&ptMouse);
@@ -344,123 +244,101 @@ void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
 	}
 }
 
-// 点击按钮查看磁盘分区
+// 点击按钮查看磁盘分区 (View 转发命令给 Controller)
 void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 {
-	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 1, false);
-	if (ret == -1) {
-		AfxMessageBox(_T("命令处理失败!!!"));
-		return;
-	}
-
-	CClientSocket* pClient = CClientSocket::GetInstance();
-	std::string drivers = pClient->GetPacket().strData;
-
-	while (true)
-	{
-		int cmd = pClient->DealCommand();
-		if (cmd < 0) break;
-
-		drivers += pClient->GetPacket().strData;
-	}
-
-	pClient->CloseSocket();
-	std::string dr;
-	m_Tree.DeleteAllItems();
-	m_List.DeleteAllItems();
-
-	for (size_t i = 0; i < drivers.size(); i++)
-	{
-		if (drivers[i] == ',') {
-			dr += ":";
-			HTREEITEM hTemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-			m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
-			dr.clear();
-			continue;
-		}
-		dr += drivers[i];
-	}
-	// 循环结束后把最后一个也加上去
-	if (!dr.empty()) {
-		dr += ":";
-		HTREEITEM hTemp = m_Tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
-		m_Tree.InsertItem(NULL, hTemp, TVI_LAST);
-	}
+    // View 转发，Controller 负责网络、解析和更新 m_Tree/m_List
+	CClientController::getInstance()->LoadDiskDrivers(this);
 }
 
-//下载文件
+//下载文件 (View 转发命令给 Controller)
 void CRemoteClientDlg::OnDownloadFile()
 {
 	int nListSelected = m_List.GetSelectionMark();
+	if (nListSelected < 0) return;
+    
 	CString strFile = m_List.GetItemText(nListSelected, 0);
 	HTREEITEM hSelected = m_Tree.GetSelectedItem();
-	strFile = GetPath(hSelected) + strFile;
-	int ret = CClientController::getInstance()->DownFile(strFile);
+    
+    // 1. View 确定远程文件路径
+	CString strRemotePath = GetPath(hSelected) + strFile;
+
+	// 2. View 通知 Controller 开始下载
+	int ret = CClientController::getInstance()->StartDownload(strRemotePath);
 	if (ret != 0) {
 		MessageBox(_T("下载失败！"));
 		TRACE("下载失败 ret = %d\r\n", ret);
 	}
 }
 
-//删除文件
+//删除文件 (View 转发命令给 Controller)
 void CRemoteClientDlg::OnDeleteFile()
 {
-	HTREEITEM hSelected = m_Tree.GetSelectedItem();//获取树控件选中项
-	int nSelected = m_List.GetSelectionMark();//获取列表控件选中项索引
-	CString strFile = m_List.GetItemText(nSelected, 0);//文件名
+	HTREEITEM hSelected = m_Tree.GetSelectedItem();
+	int nSelected = m_List.GetSelectionMark();
+	if (nSelected < 0) return;
+    
+	CString strFile = m_List.GetItemText(nSelected, 0);
 	CString strPath = GetPath(hSelected) + strFile;
-	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 9, false, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
+    
+    // View 通知 Controller 删除，Controller 负责网络通信和 View 更新（m_List.DeleteItem(nSelected)）
+	int ret = CClientController::getInstance()->RemoveFile(strPath, nSelected, this);
 	if (ret < 0)
 	{
-		AfxMessageBox(_T("打开文件命令失败!"));
-		TRACE("运行文件命令发送失败:ret=%d\r\n", ret);
+		MessageBox(_T("删除文件命令失败!"));
+		TRACE("删除文件命令发送失败:ret=%d\r\n", ret);
 		return;
 	}
-	m_List.DeleteItem(nSelected);
-	return;
 }
 
-//运行文件
+//运行文件 (View 转发命令给 Controller)
 void CRemoteClientDlg::OnRunFile()
 {
-	HTREEITEM hSelected = m_Tree.GetSelectedItem();//获取树控件选中项
-	CString strFile = m_List.GetItemText(m_List.GetSelectionMark(), 0);//文件名
+	HTREEITEM hSelected = m_Tree.GetSelectedItem();
+	int nSelected = m_List.GetSelectionMark();
+	if (nSelected < 0) return;
+    
+	CString strFile = m_List.GetItemText(nSelected, 0);
 	CString strPath = GetPath(hSelected) + strFile;
-	int nSelected = m_List.GetSelectionMark();//获取列表控件选中项索引
-	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 3, false, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
+
+	// View 通知 Controller 运行文件
+	int ret = CClientController::getInstance()->RunFile(strPath);
 	if (ret < 0)
 	{
-		AfxMessageBox(_T("打开文件命令失败!"));
+		MessageBox(_T("运行文件命令失败!")); // 修复：使用 MessageBox
 		TRACE("运行文件命令发送失败:ret=%d\r\n", ret);
 		return;
 	}
-	return;
 }
 
-//消息响应函数
+// 自定义消息响应函数 (View -> Controller 转发)
 LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
-{//实现消息响应函数④
-	/*
-	WPARAM wParam (命令号 * 2) + 开关
-	LPARAM lParam 把字符串在内存里的首地址（指针），强行转换成了一个整数传了过来
-	*/
+{
+	// **此方法原先包含大量的命令号判断和逻辑，现在应简化为转发给 Controller**
+	
+	// 由于这个消息是线程间通信的桥梁，我们将转发给 Controller 的通用消息处理。
+	// 但鉴于此处的实现依赖特定的结构体和命令号，我们暂时保持原有的 SendCommandPacket 调用，
+	// 只是调用的是 CClientController 的 SendCommandPacket。
+
 	int ret = 0;
 	int cmd = wParam >> 1;
+	// 所有的 SendCommandPacket 调用都转发到 Controller
+	// Controller 内部会调用 Model 的 SendCommandPacket
 	switch (cmd) {
-	case 4: {
+	case 4: { // 下载
 		CString strFile = (LPCSTR)lParam;
 		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
 	}
 		  break;
-	case 5: {//鼠标操作
+	case 5: {// 鼠标操作
 		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1, (BYTE*)lParam, sizeof(MOUSEEV));
 	}
 		  break;
-	case 6:
+	case 6: // 请求屏幕
 		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1,NULL,0);
 		break;
-	case 7:
-	case 8: {
+	case 7: // 锁机
+	case 8: { // 解锁
 		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1);
 	}
 		  break;
@@ -471,24 +349,33 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 	return ret;
 }
 
+// 开始监控 (View -> Controller)
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
-	m_watchDlg = false; // 重置状态，表示当前没有数据
-	m_bStopWatch = false;
-	CWatchDialog dlg(this);//创建观看对话框
-	HANDLE hThread=(HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
-	//GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);//禁用按钮
-	dlg.DoModal();//模态对话框
-	m_bStopWatch = true;
-	WaitForSingleObject(hThread, 500);
+	// 移除 m_watchDlg = false; m_bStopWatch = false; 等状态管理，由 Controller 负责
+	// 移除线程创建 threadEntryForWatchData，由 Controller 负责
+    
+	CClientController* pController = CClientController::getInstance();
+    
+    // View 启动 Watch 业务，Controller 负责线程和对话框模态
+	pController->StartWatchScreen(); // 此方法在 CClientController 中启动了 CWatchDialog.DoModal()
+
+	// 移除 WaitForSingleObject(hThread, 500)
 }
 
+void CRemoteClientDlg::OnBnClickedBtnTest()
+{
+	// View 转发命令 1981 (测试连接) 给 Controller
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 1981);
+}
+
+// IP/Port 修改 (View -> Controller)
 void CRemoteClientDlg::OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	LPNMIPADDRESS pIPAddr = reinterpret_cast<LPNMIPADDRESS>(pNMHDR);
-	// TODO: 在此添加控件通知处理程序代码
 	UpdateData();
 	CClientController* pController = CClientController::getInstance();
+    // View 通知 Controller 更新 Model 状态
 	pController->UpdateAddress(m_serv_address, atoi((LPCTSTR)(m_nPort)));
 }
 
@@ -496,5 +383,6 @@ void CRemoteClientDlg::OnEnChangeEditPort()
 {
 	UpdateData();
 	CClientController* pController = CClientController::getInstance();
+    // View 通知 Controller 更新 Model 状态
 	pController->UpdateAddress(m_serv_address, atoi((LPCTSTR)(m_nPort)));
 }

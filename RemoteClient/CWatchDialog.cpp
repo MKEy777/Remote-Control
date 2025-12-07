@@ -74,17 +74,20 @@ BOOL CWatchDialog::PreTranslateMessage(MSG* pMsg)
 
 void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 {
-	// TODO: 在此添加消息处理程序代码和/或调用默认值
+	// View 层的显示逻辑
 	if (nIDEvent == 0) {
-		CClientController* pParent = CClientController::getInstance();
-		if(m_isFull)
+		CClientController* pController = CClientController::getInstance();
+
+		// View 根据 Controller/Model 状态决定是否重绘
+		if (m_isFull) // 检查是否已收到 Model 新帧的通知
 		{
-			CImage img;
-			pParent->GetImage(img);//获取图像引用
+			// 从 Controller 获取 Model 中的图像引用
+			CImage& img = pController->GetWatchImage();
+
 			if (m_bFirstFrame)
 			{
 				int nToolBarHeight = 80;
-				// 1. 获取受控端屏幕的真实大小
+				// 1. 获取 Model 中存储的受控端屏幕的真实大小
 				int nWidth = img.GetWidth();
 				int nHeight = img.GetHeight();
 				// 2. 计算窗口边框大小
@@ -92,10 +95,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 				CalcWindowRect(&rectWindow);
 				// 3. 调整对话框窗口大小
 				SetWindowPos(NULL, 0, 0, rectWindow.Width(), rectWindow.Height(), SWP_NOMOVE | SWP_NOZORDER);
-				// 4. 调整内部 Picture Control 控件的大小，让它填满客户区
-				if (m_picture.GetSafeHwnd()) {
-					m_picture.MoveWindow(0, 0, nWidth, nHeight);
-				}
+				// 4. 调整内部 Picture Control 控件的大小
 				if (m_picture.GetSafeHwnd()) {
 					m_picture.MoveWindow(0, nToolBarHeight, nWidth, nHeight);
 				}
@@ -106,78 +106,21 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			CRect rect;
 			m_picture.GetWindowRect(rect);//获取静态控件的矩形区域
 			HDC hdc = m_picture.GetDC()->GetSafeHdc();
-	
-			img.StretchBlt(hdc, 0, 0, rect.Width(), rect.Height(),SRCCOPY);//绘制图像
-			//m_picture.InvalidateRect(NULL);//使静态控件无效，准备重绘
-			//img.BitBlt(hdc, 0, 0, SRCCOPY);//绘制图像
-			img.Destroy();
-			m_isFull=false;
-			
+
+			// 绘制图像
+			img.StretchBlt(hdc, 0, 0, rect.Width(), rect.Height(), SRCCOPY);
+			// 注意：不应在这里调用 img.Destroy()，因为 CImage 实例属于 Model 状态
+
+			m_isFull = false; // View 标记已重绘
 		}
 	}
 	CDialog::OnTimer(nIDEvent);
 }
 
-//typedef struct MouseEvent {
-//	MouseEvent() {
-//		nAction = 0;
-//		nButton = -1;
-//		ptXY.x = 0;
-//		ptXY.y = 0;
-//	}
-//	WORD nAction;//点击、移动、双击
-//	WORD nButton;//左键、中键、右键
-//	POINT ptXY;//坐标
-//}MOUSEEV, * PMOUSEEV;
 void CWatchDialog::SendMouseEvent(int nAction, int nButton, CPoint point) {
-	CPoint remotePt = UserPoint2RemotePoint(point);
-
-	// 2. 封装数据包结构体
-	MOUSEEV event;
-	event.ptXY = remotePt;
-	event.nButton = nButton; // 0左键, 1右键, 2中键, 4无按键
-	event.nAction = nAction; // 0单击, 1双击, 2按下, 3放开
-
-	// 3. 发送消息给父窗口 (RemoteClientDlg) 进行网络发送
-	// 参数说明：
-	// Msg: WM_SEND_PACKET (你在 RemoteClientDlg.h 定义的消息)
-	// wParam: 5 << 1 | 1 (5是命令号, 左移1位预留位, |1 表示长连接不关闭)
-	// lParam: 结构体的指针
-	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&event, sizeof(event));
+	// View 只负责捕获原始输入 (point) 并转发给 Controller
+	CClientController::getInstance()->HandleMouseInput(nAction, nButton, point);
 }
-
-CPoint CWatchDialog::UserPoint2RemotePoint(CPoint& point)
-{
-	CPoint ptControl = point;
-	ClientToScreen(&ptControl);             // 1. 先转成屏幕绝对坐标
-	m_picture.ScreenToClient(&ptControl);   // 2. 再转成画面控件内的相对坐标
-	
-	CRect rect;
-	m_picture.GetClientRect(&rect);
-	// 计算比例
-	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-	CImage& img = pParent->getImage();
-
-	if (img.IsNull()) {
-		return CPoint(0, 0);
-	}
-
-	int nImgWidth = img.GetWidth();
-	int nImgHeight = img.GetHeight();
-	// 控件当前尺寸
-	int nViewWidth = rect.Width();
-	int nViewHeight = rect.Height();
-
-	// 防止除以0
-	if (nViewWidth == 0 || nViewHeight == 0) return CPoint(0, 0);
-
-	// 坐标映射：真实坐标 = 点击坐标 * (原始尺寸 / 视图尺寸)
-	int x = (int)((float)ptControl.x * nImgWidth / nViewWidth + 0.5f);
-	int y = (int)((float)ptControl.y * nImgHeight / nViewHeight + 0.5f);
-
-	return CPoint(x, y);
-}
-
 void CWatchDialog::OnLButtonDown(UINT nFlags, CPoint point)
 {
 	SendMouseEvent(2, 0, point); // 2=按下, 0=左键
@@ -218,23 +161,16 @@ void CWatchDialog::OnMouseMove(UINT nFlags, CPoint point)
 	CDialog::OnMouseMove(nFlags, point);
 }
 
-//void CWatchDialog::OnSize(UINT nType, int cx, int cy)
-//{
-//	CDialog::OnSize(nType, cx, cy);
-//
-//	// 窗口大小改变时，同步调整 Picture Control 的大小
-//	if (m_picture.GetSafeHwnd())
-//	{
-//		m_picture.MoveWindow(0, 0, cx, cy);
-//	}
-//}
+// 锁机/解锁 (View 转发给 Controller)
 void CWatchDialog::OnBnClickedBtnLock()
 {
+	// Controller 转发命令给 Model (SendCommandPacket(..., 7))
 	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 7);
 }
 
 void CWatchDialog::OnBnClickedBtnUnlock()
 {
+	// Controller 转发命令给 Model (SendCommandPacket(..., 8))
 	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 8);
 }
 

@@ -1,6 +1,7 @@
 ﻿#pragma once
+// CWatchDialog.h
 #include "afxdialogex.h"
-
+ 
 
 // CWatchDialog 对话框
 
@@ -12,50 +13,42 @@ public:
 	CWatchDialog(CWnd* pParent = nullptr);   // 标准构造函数
 	virtual ~CWatchDialog();
 
-// 对话框数据
+	// 对话框数据
 #ifdef AFX_DESIGN_TIME
 	enum { IDD = IDD_DLG_WATCH };
 #endif
-public:
-	int m_nObjWidth;
-	int m_nObjHeight;
-	CImage m_image;
+
 protected:
-	bool m_isFull;//缓存是否有数据 true表示有缓存数据 false表示没有缓存数据
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
 
 	DECLARE_MESSAGE_MAP()
 public:
-	CImage& GetImage() {
-		return m_image;
-	}
-	void SetImageStatus(bool isFull = false) {
-		m_isFull = isFull;
-	}
-	bool isFull() const {
-		return m_isFull;
-	}
-	CPoint m_lastPoint;
-	afx_msg void OnTimer(UINT_PTR nIDEvent);
-	virtual BOOL OnInitDialog();
-	virtual BOOL PreTranslateMessage(MSG* pMsg);// 捕获键盘消息
+	// Picture Control 控件句柄
 	CStatic m_picture;
-	//afx_msg void OnSize(UINT nType, int cx, int cy);
-	afx_msg void OnLButtonDown(UINT nFlags, CPoint point); // 左键按下
-	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);   // 左键弹起
-	afx_msg void OnRButtonDown(UINT nFlags, CPoint point); // 右键按下
-	afx_msg void OnRButtonUp(UINT nFlags, CPoint point);   // 右键弹起
-	afx_msg void OnMouseMove(UINT nFlags, CPoint point);   // 鼠标移动
-	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point); // 左键双击
 
+	// 状态字段
+	bool m_bFirstFrame;
+	bool m_isFull = false;
+	CPoint m_lastPoint;
+
+	BOOL isFull() const { return m_isFull; } // 提供给 Controller 查询是否已准备好接收新帧
+
+	virtual BOOL OnInitDialog();
+	virtual BOOL PreTranslateMessage(MSG* pMsg);
+	afx_msg void OnTimer(UINT_PTR nIDEvent);
+
+	// 鼠标事件转发方法（View -> Controller）
 	void SendMouseEvent(int nAction, int nButton, CPoint point);
 
-	CPoint UserPoint2RemotePoint(CPoint& point);
+	// 移除 UserPoint2RemotePoint()，该逻辑已移至 Controller
 
-private:
-	bool m_bFirstFrame;
-public:
+	afx_msg void OnLButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);
+	afx_msg void OnRButtonDown(UINT nFlags, CPoint point);
+	afx_msg void OnRButtonUp(UINT nFlags, CPoint point);
+	afx_msg void OnMouseMove(UINT nFlags, CPoint point);
+	afx_msg void OnLButtonDblClk(UINT nFlags, CPoint point);
 	afx_msg void OnBnClickedBtnLock();
 	afx_msg void OnBnClickedBtnUnlock();
-	virtual void OnOK();
+	virtual void OnOK(); // 拦截回车键
 };
