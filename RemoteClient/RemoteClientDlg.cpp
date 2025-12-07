@@ -473,7 +473,7 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
-	m_isFull = false; // 重置状态，表示当前没有数据
+	m_watchDlg = false; // 重置状态，表示当前没有数据
 	m_bStopWatch = false;
 	CWatchDialog dlg(this);//创建观看对话框
 	HANDLE hThread=(HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);

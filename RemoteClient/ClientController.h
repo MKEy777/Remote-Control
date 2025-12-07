@@ -76,7 +76,6 @@ protected:
 	}
 	~CClientController() {
 		WaitForSingleObject(m_hThread, 100);
-
 	}
 	//线程函数
 	void threadFunc();
@@ -96,14 +95,21 @@ protected:
 	LRESULT OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	LRESULT CClientController::OnSendPacket(UINT nMsg, WPARAM wParam, LPARAM lParam)
 	{
-		// 这里负责在工作线程中真正发送数据
-		// wParam 是 SendPacket 中 new 出来的 PACKET_DATA 指针
 		PACKET_DATA* pData = (PACKET_DATA*)wParam;
 		if (pData != nullptr) {
-			// 调用 Socket 发送原始数据
-			CClientSocket::GetInstance()->Send(pData->strData.c_str(), pData->strData.size());
+			// --- 修改开始 ---
+			CClientSocket* pClient = CClientSocket::GetInstance();
+			// 确保连接有效。InitSocket() 会处理重连逻辑。
+			if (pClient->InitSocket())
+			{
+				pClient->Send(pData->strData.c_str(), pData->strData.size());
+			}
+			else
+			{
+				TRACE("连接服务器失败，无法发送数据包\n");
+			}
+			// --- 修改结束 ---
 
-			// 【重要】使用完后必须删除，否则会导致内存泄漏
 			delete pData;
 		}
 		return 0;

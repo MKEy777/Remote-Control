@@ -5,7 +5,7 @@
 #include "RemoteClient.h"
 #include "afxdialogex.h"
 #include "CWatchDialog.h"
-#include "RemoteClientDlg.h"
+#include "ClientController.h"
 
 
 // CWatchDialog 对话框
@@ -76,10 +76,11 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	if (nIDEvent == 0) {
-		CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();//获取父窗口指针
-		if(pParent->isFull())
+		CClientController* pParent = CClientController::getInstance();
+		if(m_isFull)
 		{
-			CImage& img = pParent->getImage();//获取图像引用
+			CImage img;
+			pParent->GetImage(img);//获取图像引用
 			if (m_bFirstFrame)
 			{
 				int nToolBarHeight = 80;
@@ -110,7 +111,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			//m_picture.InvalidateRect(NULL);//使静态控件无效，准备重绘
 			//img.BitBlt(hdc, 0, 0, SRCCOPY);//绘制图像
 			img.Destroy();
-			pParent->SetImageStatus(false);
+			m_isFull=false;
 			
 		}
 	}
@@ -142,8 +143,7 @@ void CWatchDialog::SendMouseEvent(int nAction, int nButton, CPoint point) {
 	// Msg: WM_SEND_PACKET (你在 RemoteClientDlg.h 定义的消息)
 	// wParam: 5 << 1 | 1 (5是命令号, 左移1位预留位, |1 表示长连接不关闭)
 	// lParam: 结构体的指针
-	CWnd* pParent = GetParent();
-	pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (LPARAM)&event);
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 5, true, (BYTE*)&event, sizeof(event));
 }
 
 CPoint CWatchDialog::UserPoint2RemotePoint(CPoint& point)
@@ -230,14 +230,12 @@ void CWatchDialog::OnMouseMove(UINT nFlags, CPoint point)
 //}
 void CWatchDialog::OnBnClickedBtnLock()
 {
-	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-	pParent->SendMessage(WM_SEND_PACKET, 7 << 1 | 1);//发送锁机命令
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 7);
 }
 
 void CWatchDialog::OnBnClickedBtnUnlock()
 {
-	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-	pParent->SendMessage(WM_SEND_PACKET, 8 << 1 | 1);//发送解锁命令
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 8);
 }
 
 void CWatchDialog::OnOK()

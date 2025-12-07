@@ -24,19 +24,14 @@ public:
 	virtual void DoDataExchange(CDataExchange* pDX);	// DDX/DDV support
 
 public:
-	bool isFull() const { return m_isFull; }
-	void SetImageStatus(bool isFull=false) { m_isFull = isFull; }
 	CImage& getImage() { return m_image; }
 private:
 	CImage m_image;//缓存屏幕图像
-	bool m_isFull; //缓存是否有数据
 	bool m_bStopWatch;//停止监视标志
 
 private:
 	static void threadEntryForWatchData(void* arg);
 	void threadWatchData();
-	static void threadEntryForDownFile(void* arg);	
-	void threadDownFile();
 	void LoadFileInfo();
 	void LoadFileCurrent();
 	CString GetPath(HTREEITEM hTree);
