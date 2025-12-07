@@ -49,7 +49,6 @@ public:
 
 	// 下载文件业务逻辑
 	int StartDownload(const CString& strRemote, FILE* pFile);
-	void DownloadEnd();
 
 	// 屏幕监控业务逻辑
 	void SetWatchStatus(bool isClosed) { m_isClosed = isClosed; }
@@ -58,7 +57,7 @@ public:
 	int GetImage(CImage& image); // 获取当前屏幕图像数据
 
 	// 鼠标控制业务逻辑 (此处仅为接口，实际坐标转换在Controller中完成)
-	// **注意：此处的实现我们已决定转移到 Controller，但为了匹配 .cpp 签名暂时保留**
+
 	CPoint ConvertPointToRemote(const CPoint& viewPoint);
 	bool SendMouseCommand(const MOUSEEV& event);
 
@@ -67,7 +66,6 @@ public:
 	const CString& getRemotePath() const { return m_strRemote; }
 	const CString& getLocalPath() const { return m_strLocal; }
 	void setLocalPath(const CString& strLocal) { m_strLocal = strLocal; }
-
 private:
 	CClientModel();
 	~CClientModel();

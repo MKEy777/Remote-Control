@@ -35,7 +35,7 @@ CClientController* CClientController::getInstance()
 			{WM_SHOW_WATCH,&CClientController::OnShowWatcher},
 			{WM_SEND_DATA,&CClientController::OnSendData},
 			{WM_SEND_PACK, &CClientController::OnSendPacket},
-			{(UINT)4, &CClientController::OnDownloadEnd}, // 4 是下载命令号，此处假设 Model 用命令号作为通知消息
+			{(UINT)4, &CClientController::OnDownloadEnd}, 
 			{(UINT)-1,NULL}
 		};
 		for (int i = 0; MsgFuncs[i].func != NULL; i++) {
@@ -284,11 +284,7 @@ LRESULT CClientController::OnSendPacket(UINT nMsg, WPARAM wParam, LPARAM lParam)
 LRESULT CClientController::OnDownloadEnd(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
 
-	m_statusDlg.ShowWindow(SW_HIDE);
-	m_remoteDlg.EndWaitCursor();
-	m_remoteDlg.MessageBox(_T("下载完成！！"), _T("完成"));
-	m_pModel->DownloadEnd();
-
+	DownloadEnd();
 	return 0;
 }
 int CClientController::SafeCopyFileInfo(PFILEINFO pDestInfo, const std::string& packetData)
@@ -312,29 +308,28 @@ int CClientController::SafeCopyFileInfo(PFILEINFO pDestInfo, const std::string& 
 }
 int CClientController::LoadDiskDrivers(CRemoteClientDlg* pView)
 {
-	// 1. Controller 调用 Model 发送请求 (命令 1)
 	int ret = m_pModel->SendCommandPacket(pView->GetSafeHwnd(), 1, false); // Cmd: 1
 	if (ret == -1) {
 		pView->MessageBox(_T("命令处理失败!!!"));
 		return -1;
 	}
 
-	// 2. Controller 调用 Model 处理网络数据，并执行 View 更新
-	CClientSocket* pClient = CClientSocket::GetInstance(); // Model 依赖
-	std::string drivers = pClient->GetPacket().strData;
+	CClientSocket* pClient = CClientSocket::GetInstance();
+	std::string drivers = pClient->GetPacket().strData; // 获取第一个包的数据
 
+	// 循环接收后续数据包，直到连接断开或出错
 	while (true)
 	{
-		// 核心逻辑：DealCommand 和 GetPacket() 仍需依赖 Model
 		int cmd = m_pModel->DealCommand();
-		if (cmd < 0) break;
+		if (cmd < 0) break; // 接收失败或连接断开，退出聚合
 
+		// 如果成功，将新包的数据追加到总字符串中
 		drivers += pClient->GetPacket().strData;
 	}
 
 	m_pModel->CloseSocket(); // 关闭 Socket
 
-	// 3. Controller 指示 View 更新界面 (Tree/List)
+	// 3. View 更新 (解析逻辑保持不变)
 	std::string dr;
 	pView->m_Tree.DeleteAllItems();
 	pView->m_List.DeleteAllItems();
@@ -361,57 +356,74 @@ int CClientController::LoadDiskDrivers(CRemoteClientDlg* pView)
 // Controller：加载指定目录下的文件 (View -> Model -> View)
 int CClientController::LoadDirectory(CRemoteClientDlg* pView, HTREEITEM hTree, CString strPath)
 {
-	// 1. Controller 清理 View 控件 
+	// 1. 清理 View 控件并发送命令 (保持不变)
 	pView->m_List.DeleteAllItems();
 	if (hTree != NULL && pView->m_Tree.GetChildItem(hTree) != NULL) {
-		pView->DeleteTreeChildrenItem(hTree); // 假设 DeleteTreeChildrenItem 存在
+		pView->DeleteTreeChildrenItem(hTree);
 	}
 
-	// 2. Controller 调用 Model 发送请求 (命令 2)
 	int ret = m_pModel->SendCommandPacket(pView->GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	if (ret == -1) {
 		pView->MessageBox(_T("命令处理失败!!!"));
 		return -1;
 	}
 
+	// 2. 数据处理：使用两层循环结构处理多结构体多数据包问题
 	CClientSocket* pClient = CClientSocket::GetInstance();
+	const size_t FILEINFO_SIZE = sizeof(FILEINFO);
+	bool bListFinished = false; // 标记文件列表是否结束
 
-	// 【安全修复 1.1：引入本地安全结构体】
-	FILEINFO currentInfo;
-	PFILEINFO pInfo = &currentInfo;
+	// 外部循环：持续接收网络包，直到列表结束或出错
+	while (!bListFinished)
+	{
+		// 获取当前包的数据指针和剩余长度
+		const std::string& strData = pClient->GetPacket().strData;
+		const char* pCurrent = strData.c_str();
+		size_t nRemaining = strData.size();
 
-	// 【安全修复 1.2：第一次数据获取 - 复制到本地并强制空终止符】
-	const std::string& firstPacketData = pClient->GetPacket().strData;
-	// 复制数据到本地安全内存
-	memcpy(pInfo, firstPacketData.c_str(), sizeof(FILEINFO));
-	// 强制空终止符，解决 CString 访问越界问题
-	pInfo->szFileName[sizeof(pInfo->szFileName) - 1] = '\0';
+		// 内部循环：解析当前数据包中的所有 FILEINFO 结构
+		while (nRemaining >= FILEINFO_SIZE) {
 
+			// 转换为 FILEINFO 结构体指针
+			PFILEINFO pInfo = (PFILEINFO)pCurrent;
 
-	// PFILEINFO 结构体定义在 Packet.h
-	while (pInfo->HasNext) {
-		// CController 调用 Dlg 的 UpdateFileInfo 来处理 UI 逻辑
-		pView->UpdateFileInfo(currentInfo, hTree);
+			// **A. 检查列表结束标记**
+			if (!pInfo->HasNext) {
+				bListFinished = true;
+			}
 
-		// Controller 调用 Model 继续处理下一个命令，这会覆盖共享缓冲区
+			// **B. 显示逻辑**
+			if (pInfo->IsDirectory) {
+				// 排除 . 和 ..
+				if (CString(pInfo->szFileName) != "." && CString(pInfo->szFileName) != "..")
+				{
+					// 插入子目录到 Tree 控件
+					HTREEITEM hTemp = pView->m_Tree.InsertItem(pInfo->szFileName, hTree, TVI_LAST);
+					pView->m_Tree.InsertItem("", hTemp, TVI_LAST);
+				}
+			}
+			else {
+				// 插入文件到 List 控件
+				pView->m_List.InsertItem(0, pInfo->szFileName);
+			}
+
+			// **C. 移动到下一个 FILEINFO**
+			pCurrent += FILEINFO_SIZE;
+			nRemaining -= FILEINFO_SIZE;
+
+			if (bListFinished) break; // 如果列表已结束，立刻跳出内部循环
+		} // 内部循环结束
+
+		if (bListFinished) break; // 如果列表已结束，跳出外部循环
+
+		// 当前包数据已耗尽，且列表尚未结束，调用 DealCommand 请求下一个包
 		int cmd = m_pModel->DealCommand();
+		// DealCommand 返回 < 0 表示连接断开或错误，退出循环
 		if (cmd < 0) break;
-
-		// 【安全修复 1.3：获取下一个包 - 复制到本地并强制空终止符】
-		const std::string& nextPacketData = pClient->GetPacket().strData;
-		// 复制数据到本地安全内存，替代原有的指针赋值
-		memcpy(pInfo, nextPacketData.c_str(), sizeof(FILEINFO));
-		// 强制空终止符
-		pInfo->szFileName[sizeof(pInfo->szFileName) - 1] = '\0';
 	}
 
-	// 循环结束后，强制展开父节点以刷新 UI
-	if (hTree != NULL) {
-		pView->m_Tree.Expand(hTree, TVE_EXPAND);
-	}
-
-	m_pModel->CloseSocket(); // 关闭 Socket
-	return 0;;
+	m_pModel->CloseSocket();
+	return 0;
 }
 
 // Controller：删除文件 (View -> Model -> View)
@@ -439,4 +451,11 @@ int CClientController::RunFile(CString strPath)
 		return -1;
 	}
 	return 0;
+}
+
+void CClientController::DownloadEnd()
+{
+	m_statusDlg.ShowWindow(SW_HIDE);
+	m_remoteDlg.EndWaitCursor();
+	m_remoteDlg.MessageBox(_T("下载完成！！"), _T("完成"));
 }

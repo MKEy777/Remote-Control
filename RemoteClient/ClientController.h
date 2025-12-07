@@ -61,6 +61,17 @@ public:
 		return m_pModel->SendPacket(pack);
 	}
 
+	//1 查看磁盘分区
+	//2 查看指定目录下的文件
+	//3 打开文件
+	//4 下载文件
+	//9 删除文件
+	//5 鼠标操作
+	//6 发送屏幕内容
+	//7 锁机
+	//8 解锁
+	//1981 测试连接
+	//返回值：是状态，true是成功 false是失败
 	bool SendCommandPacket(
 		HWND hWnd,
 		int nCmd,
@@ -75,12 +86,13 @@ public:
 	// 下载控制
 	int StartDownload(CString strPath);
 
-	// 文件操作 View -> Controller -> Model (新增)
+	// 文件操作 View -> Controller -> Model 
 	int SafeCopyFileInfo(PFILEINFO pDestInfo, const std::string& packetData);
 	int LoadDiskDrivers(CRemoteClientDlg* pView);
 	int LoadDirectory(CRemoteClientDlg* pView, HTREEITEM hTree, CString strPath);
 	int CClientController::RemoveFile(CString strPath, int nSelected, CRemoteClientDlg* pView);
 	int RunFile(CString strPath);
+	void DownloadEnd();
 
 	// 监控控制
 	void StartWatchScreen();

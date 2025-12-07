@@ -63,12 +63,11 @@ void CClientModel::SetControllerThreadID(unsigned nThreadID) {
 
 // ---------------------- 核心业务逻辑 ----------------------
 
-// 核心业务逻辑：发送数据包（与网络直接交互，属于Model职责）
+// 核心业务逻辑：发送数据包
 bool CClientModel::SendCommandPacket(HWND hWnd, int nCmd, bool bAutoClose, BYTE* pData, size_t nLength, WPARAM wParam)
 {
 	TRACE("cmd:%d %s start %lld \r\n", nCmd, __FUNCTION__, GetTickCount64());
 	CClientSocket* pClient = CClientSocket::GetInstance();
-	// 原逻辑中 CClientSocket 是单例，我们沿用此实现。
 	bool ret = pClient->SendPacket(hWnd, CPacket(nCmd, pData, nLength), bAutoClose, wParam);
 	return ret;
 }
@@ -80,12 +79,6 @@ int CClientModel::GetImage(CImage& image) {
 	return Tool::Bytes2Image(m_currentImage, pClient->GetPacket().strData);
 }
 
-// 业务逻辑：下载结束 (应通知Controller，由Controller通知View，此处仅作占位)
-void CClientModel::DownloadEnd()
-{
-	// 原有显示/提示逻辑应移至Controller或View，此处仅保留与数据/状态相关的清理
-	// 假设通知 Controller 的机制已建立（此处省略）
-}
 
 // 业务逻辑：请求屏幕帧
 int CClientModel::RequestScreenFrame(HWND hWnd)
@@ -97,10 +90,7 @@ int CClientModel::RequestScreenFrame(HWND hWnd)
 // 业务逻辑：开始下载（仅负责发送命令和记录路径）
 int CClientModel::StartDownload(const CString& strRemote, FILE* pFile)
 {
-	// 4 是下载文件命令
-	// Model 记录远程路径 (本地路径由 Controller 在此方法调用前通过 setLocalPath 设置)
 	m_strRemote = strRemote;
-	// 转发命令，文件句柄 pFile 通过 wParam 传递。
 	SendCommandPacket(NULL, 4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength(), (WPARAM)pFile);
 	return 0;
 }
@@ -115,8 +105,6 @@ CPoint CClientModel::ConvertPointToRemote(const CPoint& viewPoint)
 	if (m_currentImage.IsNull()) {
 		return CPoint(0, 0);
 	}
-
-	// 暂时返回 (0, 0)，因为 View 尺寸信息缺失。
 	return CPoint(0, 0);
 }
 
