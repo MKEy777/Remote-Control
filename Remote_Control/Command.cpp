@@ -200,8 +200,8 @@ int CCommand::MouseEvent(std::list<CPacket>& lstPacket, CPacket& inPacket) {
     case 0x08: { // ÒÆ¶¯
         int screenX = GetSystemMetrics(SM_CXSCREEN);
         int screenY = GetSystemMetrics(SM_CYSCREEN);
-        LONG dx = mouse.ptXY.x * 65535 / (screenX - 1);
-        LONG dy = mouse.ptXY.y * 65535 / (screenY - 1);
+        LONG dx = realX * 65535 / (screenX - 1);
+        LONG dy = realY * 65535 / (screenY - 1);
         mouse_event(MOUSEEVENTF_MOVE | MOUSEEVENTF_ABSOLUTE, dx, dy, 0, GetMessageExtraInfo());
         break;
     }

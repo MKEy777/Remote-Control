@@ -89,6 +89,10 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 			case 6:
 			{
 				Tool::Bytes2Image(m_image, head.strData);
+				if (m_image.IsNull() == false) {
+					m_nObjWidth = m_image.GetWidth();
+					m_nObjHeight = m_image.GetHeight();
+				}
 				m_isFull = true;
 				/*CRect rect;
 				m_picture.GetWindowRect(rect);
