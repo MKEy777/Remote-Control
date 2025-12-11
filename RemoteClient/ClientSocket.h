@@ -286,7 +286,6 @@ public:
 			m_nPort = nPort;
 		}
 	}
-
 private:
 	HANDLE m_eventInvoke;//启动事件
 	UINT m_nThreadID;
@@ -311,6 +310,7 @@ private:
 		closesocket(m_sock);
 		WSACleanup();
 	}
+
 	bool Send(const char* pData, int nSize) {
 		if (m_sock == -1) return false;
 		return send(m_sock, pData, nSize, 0) > 0;
@@ -336,6 +336,7 @@ private:
 		delete[] pData;
 		return bRet;
 	}
+	//主要用于发送数据到服务端，然后接收从服务端返回的消息，并且SendMessage()到对应的界面回调函数中
 	void SendPack(UINT nMsg, WPARAM wParam/*缓冲区的值*/, LPARAM lParam/*缓冲区的长度*/);
 	static unsigned __stdcall threadEntry(void* arg);
 	void threadFunc2();

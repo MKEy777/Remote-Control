@@ -24,6 +24,9 @@ public:
 	void UpdateAddress(int nIP, int nPort) {
 		CClientSocket::GetInstance()->UpdateAddress(nIP, nPort);
 	}
+	int DealCommand() {
+		return CClientSocket::GetInstance()->DealCommand();
+	}
 	//发送消息
 	bool SendCommandPacket(
 		HWND hWnd,//数据包受到后，需要应答的窗口
