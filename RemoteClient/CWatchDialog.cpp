@@ -2,10 +2,9 @@
 //
 
 #include "pch.h"
-#include "RemoteClient.h"
 #include "afxdialogex.h"
 #include "CWatchDialog.h"
-#include "RemoteClientDlg.h"
+#include "ClientController.h"
 
 
 // CWatchDialog 对话框
@@ -17,7 +16,9 @@ CWatchDialog::CWatchDialog(CWnd* pParent /*=nullptr*/)
 {
 	m_bFirstFrame = true;
 	m_lastPoint = CPoint(0, 0);
-
+	m_nObjWidth=-1;
+	m_nObjHeight=-1;
+	m_isFull = false;
 }
 
 CWatchDialog::~CWatchDialog()
@@ -42,17 +43,16 @@ BEGIN_MESSAGE_MAP(CWatchDialog, CDialog)
 	ON_WM_LBUTTONDBLCLK()
 	ON_BN_CLICKED(IDC_BTN_LOCK, &CWatchDialog::OnBnClickedBtnLock)
 	ON_BN_CLICKED(IDC_BTN_UNLOCK, &CWatchDialog::OnBnClickedBtnUnlock)
+	ON_MESSAGE(WM_SEND_PACK_ACK, &CWatchDialog::OnSendPackAck)
 END_MESSAGE_MAP()
 
 
 // CWatchDialog 消息处理程序
 
-
-
 BOOL CWatchDialog::OnInitDialog()
 {
 	CDialog::OnInitDialog();
-
+	m_isFull = false;
 	// TODO:  在此添加额外的初始化
 	SetTimer(0, 50, NULL);//50ms刷新一次
 
@@ -72,14 +72,58 @@ BOOL CWatchDialog::PreTranslateMessage(MSG* pMsg)
 	return CDialog::PreTranslateMessage(pMsg);
 }
 
+LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
+{
+	if (lParam == -1 || (lParam == -2)) {
+		//TODO:错误处理
+	}
+	else if (lParam == 1) {
+		//对方关闭了套接字
+	}
+	else {
+		CPacket* pPacket = (CPacket*)wParam;
+		if (pPacket != NULL) {
+			CPacket head = *(CPacket*)wParam;
+			delete (CPacket*)wParam;
+			switch (head.sCmd) {
+			case 6:
+			{
+				Tool::Bytes2Image(m_image, head.strData);
+				CRect rect;
+				m_picture.GetWindowRect(rect);
+				m_nObjWidth = m_image.GetWidth();
+				m_nObjHeight = m_image.GetHeight();
+				m_image.StretchBlt(
+					m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
+				m_picture.InvalidateRect(NULL);
+				TRACE("更新图片完成%d %d %08X\r\n", m_nObjWidth, m_nObjHeight, (HBITMAP)m_image);
+				m_image.Destroy();
+				break;
+			}
+			case 5:
+				TRACE("远程端应答了鼠标操作\r\n");
+				break;
+			case 7:
+			case 8:
+			default:
+				break;
+			}
+
+		}
+	}
+
+	return 0;
+}
+
 void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	if (nIDEvent == 0) {
-		CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();//获取父窗口指针
-		if(pParent->isFull())
+		CClientController* pParent = CClientController::getInstance();
+		if(m_isFull)
 		{
-			CImage& img = pParent->getImage();//获取图像引用
+			CImage img;
+			pParent->GetImage(img);//获取图像引用
 			if (m_bFirstFrame)
 			{
 				int nToolBarHeight = 80;
@@ -110,7 +154,7 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 			//m_picture.InvalidateRect(NULL);//使静态控件无效，准备重绘
 			//img.BitBlt(hdc, 0, 0, SRCCOPY);//绘制图像
 			img.Destroy();
-			pParent->SetImageStatus(false);
+			m_isFull=false;
 			
 		}
 	}
@@ -129,51 +173,45 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 //	POINT ptXY;//坐标
 //}MOUSEEV, * PMOUSEEV;
 void CWatchDialog::SendMouseEvent(int nAction, int nButton, CPoint point) {
-	CPoint remotePt = UserPoint2RemotePoint(point);
-
+	CPoint remotePt = UserPoint2RemoteScreenPoint(point, false);
+	if (remotePt.x == -1 && remotePt.y == -1) return;
 	// 2. 封装数据包结构体
 	MOUSEEV event;
 	event.ptXY = remotePt;
 	event.nButton = nButton; // 0左键, 1右键, 2中键, 4无按键
 	event.nAction = nAction; // 0单击, 1双击, 2按下, 3放开
 
-	// 3. 发送消息给父窗口 (RemoteClientDlg) 进行网络发送
-	// 参数说明：
-	// Msg: WM_SEND_PACKET (你在 RemoteClientDlg.h 定义的消息)
-	// wParam: 5 << 1 | 1 (5是命令号, 左移1位预留位, |1 表示长连接不关闭)
-	// lParam: 结构体的指针
-	CWnd* pParent = GetParent();
-	pParent->SendMessage(WM_SEND_PACKET, 5 << 1 | 1, (LPARAM)&event);
+	CClientController* pController = CClientController::getInstance();
+	if (pController) {
+		pController->SendCommandPacket(
+			GetSafeHwnd(),
+			5,
+			true,
+			(BYTE*)&event,
+			sizeof(MOUSEEV)
+		);
+	}
 }
 
-CPoint CWatchDialog::UserPoint2RemotePoint(CPoint& point)
+CPoint CWatchDialog::UserPoint2RemoteScreenPoint(CPoint& point, bool isScreen)
 {
-	CPoint ptControl = point;
-	ClientToScreen(&ptControl);             // 1. 先转成屏幕绝对坐标
-	m_picture.ScreenToClient(&ptControl);   // 2. 再转成画面控件内的相对坐标
-	
-	CRect rect;
-	m_picture.GetClientRect(&rect);
-	// 计算比例
-	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-	CImage& img = pParent->getImage();
+	if (m_nObjWidth <= 0 || m_nObjHeight <= 0) {
+		return CPoint(-1, -1);
+	}
+	if (!isScreen) {
+		ClientToScreen(&point); 
+	}
+	m_picture.ScreenToClient(&point);
 
-	if (img.IsNull()) {
-		return CPoint(0, 0);
+	CRect clientRect;
+	m_picture.GetClientRect(&clientRect);
+
+	if (clientRect.Width() == 0 || clientRect.Height() == 0) {
+		return CPoint(-1, -1);
 	}
 
-	int nImgWidth = img.GetWidth();
-	int nImgHeight = img.GetHeight();
-	// 控件当前尺寸
-	int nViewWidth = rect.Width();
-	int nViewHeight = rect.Height();
-
-	// 防止除以0
-	if (nViewWidth == 0 || nViewHeight == 0) return CPoint(0, 0);
-
-	// 坐标映射：真实坐标 = 点击坐标 * (原始尺寸 / 视图尺寸)
-	int x = (int)((float)ptControl.x * nImgWidth / nViewWidth + 0.5f);
-	int y = (int)((float)ptControl.y * nImgHeight / nViewHeight + 0.5f);
+	int x = (int)((float)point.x * m_nObjWidth / clientRect.Width() + 0.5f);
+	int y = (int)((float)point.y * m_nObjHeight / clientRect.Height() + 0.5f);
 
 	return CPoint(x, y);
 }
@@ -230,14 +268,12 @@ void CWatchDialog::OnMouseMove(UINT nFlags, CPoint point)
 //}
 void CWatchDialog::OnBnClickedBtnLock()
 {
-	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-	pParent->SendMessage(WM_SEND_PACKET, 7 << 1 | 1);//发送锁机命令
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 7);
 }
 
 void CWatchDialog::OnBnClickedBtnUnlock()
 {
-	CRemoteClientDlg* pParent = (CRemoteClientDlg*)GetParent();
-	pParent->SendMessage(WM_SEND_PACKET, 8 << 1 | 1);//发送解锁命令
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),8);
 }
 
 void CWatchDialog::OnOK()

@@ -193,6 +193,7 @@
     <ClInclude Include="RemoteClientDlg.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="targetver.h" />
+    <ClInclude Include="Tool.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="ClientController.cpp" />

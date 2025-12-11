@@ -33,6 +33,7 @@ private:
 	bool m_bStopWatch;//停止监视标志
 
 private:
+	//void DealCommand(WORD nCmd, const std::string& strData, LPARAM lParam);
 	static void threadEntryForWatchData(void* arg);
 	void threadWatchData();
 	static void threadEntryForDownFile(void* arg);	
@@ -52,7 +53,7 @@ private:
 	//8 解锁
 	//1981 测试连接
 	//返回值：是命令号，如果小于0则是错误
-	int SendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0);
+	//int SendCommandPacket(int nCmd, bool bAutoClose = true, BYTE* pData = NULL, size_t nLength = 0);
 
 // Implementation
 protected:

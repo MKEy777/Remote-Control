@@ -1,9 +1,11 @@
 #include "pch.h"
 #include "ClientController.h"
+#include "ClientSocket.h"
 
 std::map<UINT, CClientController::MSGFUNC> CClientController::m_mapFunc;
 CClientController* CClientController::m_instance = NULL;
 CClientController::CHelper CClientController::m_helper;
+
 
 CClientController* CClientController::getInstance()
 {
@@ -21,7 +23,7 @@ CClientController* CClientController::getInstance()
 			m_mapFunc.insert(std::pair<UINT, MSGFUNC>(MsgFuncs[i].nMsg, MsgFuncs[i].func));
 		}
 	}
-	return nullptr;
+	return m_instance;
 }
 
 int CClientController::initController()
@@ -39,19 +41,89 @@ int CClientController::Invoke(CWnd*& pMainWnd)
 	return m_remoteDlg.DoModal();
 }
 
-LRESULT CClientController::SendMessage(MSG msg)
+bool CClientController::SendCommandPacket(HWND hWnd, int nCmd, bool bAutoClose, BYTE* pData, size_t nLength, WPARAM wParam)
 {
-	HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);//创建事件对象
-	if(hEvent==NULL) {
-		return -2;
+	TRACE("cmd:%d %s start %lld \r\n", nCmd, __FUNCTION__, GetTickCount64());
+	CClientSocket* pClient = CClientSocket::GetInstance();
+	bool ret = pClient->SendPacket(hWnd, CPacket(nCmd, pData, nLength), bAutoClose, wParam);
+	return ret;
+}
+
+int CClientController::GetImage(CImage& image)
+{
+	CClientSocket* pClient = CClientSocket::GetInstance();
+	return Tool::Bytes2Image(image, pClient->GetPacket().strData);
+}
+
+int CClientController::DownFile(CString strPath)
+{
+	CFileDialog dlg(
+		FALSE, NULL,
+		strPath, OFN_HIDEREADONLY | OFN_OVERWRITEPROMPT,
+		NULL, &m_remoteDlg);
+	if (dlg.DoModal() == IDOK) {
+		m_strRemote = strPath;
+		m_strLocal = dlg.GetPathName();
+		FILE* pFile = nullptr;
+		if (fopen_s(&pFile, m_strLocal, "wb+") != 0)
+		{
+			AfxMessageBox(_T("无法创建文件！"));
+			return -1;
+		}
+		SendCommandPacket(m_remoteDlg, 4, false, (BYTE*)(LPCSTR)m_strRemote, m_strRemote.GetLength(), (WPARAM)pFile);
+		m_remoteDlg.BeginWaitCursor();
+		m_statusDlg.m_info.SetWindowText(_T("命令正在执行中！"));
+		m_statusDlg.ShowWindow(SW_SHOW);
+		m_statusDlg.CenterWindow(&m_remoteDlg);
+		m_statusDlg.SetActiveWindow();
 	}
-	MSGINFO info(msg);// 要传过去的消息数据
-	PostThreadMessage(m_nThreadID, 
-		WM_SEND_MESSAGE, 
-		(WPARAM)&info, 
-		(LPARAM)&hEvent);
-	WaitForSingleObject(hEvent, -1);
-	return info.result;
+	return 0;
+}
+
+void CClientController::DownloadEnd()
+{
+	m_statusDlg.ShowWindow(SW_HIDE);
+	m_remoteDlg.EndWaitCursor();
+	m_remoteDlg.MessageBox(_T("下载完成！！"), _T("完成"));
+}
+
+void CClientController::StartWatchScreen()
+{
+	m_isClosed = false;
+	m_hThreadWatch = (HANDLE)_beginthread(&CClientController::threadWatchScreen, 0, this);
+	m_watchDlg.DoModal();
+	m_isClosed = true;
+	WaitForSingleObject(m_hThreadWatch, 500);
+}
+
+void CClientController::threadWatchScreen()
+{
+	Sleep(50);
+	ULONGLONG nTick = GetTickCount64();
+	while (!m_isClosed) {
+		if (m_watchDlg.isFull() == false) {
+			if (GetTickCount64() - nTick < 200) {
+				Sleep(200 - DWORD(GetTickCount64() - nTick));
+			}
+			nTick = GetTickCount64();
+			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(), 6, true, NULL, 0);
+			if (ret == 1) {
+				//TRACE("成功发送请求图片命令\r\n");
+			}
+			else {
+				TRACE("获取图片失败！ret = %d\r\n", ret);
+			}
+		}
+		Sleep(1);
+	}
+	TRACE("thread end %d\r\n", m_isClosed);
+}
+
+void CClientController::threadWatchScreen(void* arg)
+{
+	CClientController* thiz = (CClientController*)arg;
+	thiz->threadWatchScreen();
+	_endthread();
 }
 
 void CClientController::threadFunc()
@@ -83,12 +155,26 @@ void CClientController::threadFunc()
 	}
 }
 
-unsigned _stdcall CClientController::threadEntry(void* arg)
+unsigned CClientController::threadEntry(void* arg)
 {
 	CClientController* thiz = (CClientController*)arg;
 	thiz->threadFunc();
 	_endthreadex(0);
 	return 0;
+}
+
+void CClientSocket::threadFunc2()
+{
+	SetEvent(m_eventInvoke);
+	MSG msg;
+	while (::GetMessage(&msg, NULL, 0, 0)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+		TRACE("Get Message :%08X \r\n", msg.message);
+		if (m_mapFunc.find(msg.message) != m_mapFunc.end()) {
+			(this->*m_mapFunc[msg.message])(msg.message, msg.wParam, msg.lParam);
+		}
+	}
 }
 
 LRESULT CClientController::OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam)

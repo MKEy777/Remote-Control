@@ -19,14 +19,18 @@ public:
 
 protected:
 	virtual void DoDataExchange(CDataExchange* pDX);    // DDX/DDV 支持
-
+	bool m_isFull;//缓存是否有数据 true表示有缓存数据 false表示没有缓存数据
 	DECLARE_MESSAGE_MAP()
 public:
+	int m_nObjWidth;
+	int m_nObjHeight;
 	CPoint m_lastPoint;
+	CImage m_image;
 	afx_msg void OnTimer(UINT_PTR nIDEvent);
 	virtual BOOL OnInitDialog();
 	virtual BOOL PreTranslateMessage(MSG* pMsg);// 捕获键盘消息
 	CStatic m_picture;
+	afx_msg LRESULT OnSendPackAck(WPARAM wParam, LPARAM lParam);
 	//afx_msg void OnSize(UINT nType, int cx, int cy);
 	afx_msg void OnLButtonDown(UINT nFlags, CPoint point); // 左键按下
 	afx_msg void OnLButtonUp(UINT nFlags, CPoint point);   // 左键弹起
@@ -37,7 +41,17 @@ public:
 
 	void SendMouseEvent(int nAction, int nButton, CPoint point);
 
-	CPoint UserPoint2RemotePoint(CPoint& point);
+	CPoint UserPoint2RemoteScreenPoint(CPoint& point, bool isScreen);
+
+	CImage& GetImage() {
+		return m_image;
+	}
+	void SetImageStatus(bool isFull = false) {
+		m_isFull = isFull;
+	}
+	bool isFull() const {
+		return m_isFull;
+	}
 
 private:
 	bool m_bFirstFrame;

@@ -4,8 +4,9 @@
 #include "StatusDlg.h"
 #include <map>
 #include "resource.h"
+#include "Tool.h"
 
-#define WM_SEND_PACK (WM_USER + 1)//发送包数据
+//#define WM_SEND_PACK (WM_USER + 1)//发送包数据
 #define WM_SEND_DATA (WM_USER + 2)//发送数据
 #define WM_SHOW_STATUS (WM_USER + 3)//展示状态
 #define WM_SHOW_WATCH (WM_USER+4) //远程监控
@@ -21,12 +22,30 @@ public:
 	//启动
 	int Invoke(CWnd*& pMainWnd);
 	//发送消息
-	LRESULT SendMessage(MSG msg);
+	bool SendCommandPacket(
+		HWND hWnd,//数据包受到后，需要应答的窗口
+		int nCmd,
+		bool bAutoClose = true,
+		BYTE* pData = NULL,
+		size_t nLength = 0,
+		WPARAM wParam = 0);
+
+	int GetImage(CImage& image);
+
+	int DownFile(CString strPath);
+
+	void DownloadEnd();
+
+	void StartWatchScreen();
 protected:
+	void threadWatchScreen();
+	static void threadWatchScreen(void* arg);
 	CClientController():m_statusDlg(&m_remoteDlg),m_watchDlg(&m_remoteDlg)
 	{
+		m_isClosed=true;
 		m_hThread = INVALID_HANDLE_VALUE;
 		m_nThreadID = -1;
+		m_hThreadWatch= INVALID_HANDLE_VALUE;;
 	}
 	~CClientController() {
 		WaitForSingleObject(m_hThread, 100);
@@ -73,17 +92,22 @@ private:
 	//消息函数指针定义
 	typedef LRESULT(CClientController::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);//(消息类型，无符号整型，长整型)
 	static std::map<UINT, MSGFUNC> m_mapFunc;//消息映射表
-	CWatchDialog m_watchDlg;//远程监控对话框
-	CRemoteClientDlg m_remoteDlg;//远程客户端对话框
-	CStatusDlg m_statusDlg;//状态对话框
-	static CClientController* m_instance;
+	CWatchDialog m_watchDlg;//消息包，在对话框关闭之后，可能导致内存泄漏
+	CRemoteClientDlg m_remoteDlg;
+	CStatusDlg m_statusDlg;
 	HANDLE m_hThread;
+	HANDLE m_hThreadWatch;
+	bool m_isClosed;//监视是否关闭
+	//下载文件的远程路径
+	CString m_strRemote;
+	//下载文件的本地保存路径
+	CString m_strLocal;
 	unsigned m_nThreadID;
-
+	static CClientController* m_instance;
 	class CHelper {
 	public:
 		CHelper() {
-			CClientController::getInstance();
+			//CClientController::getInstance();
 		}
 		~CHelper() {
 			CClientController::releaseInstance();

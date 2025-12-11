@@ -6,8 +6,9 @@
 #include "RemoteClient.h"
 #include "RemoteClientDlg.h"
 #include "afxdialogex.h"
-#include "ClientSocket.h"
+#include "ClientController.h"
 #include "CWatchDialog.h"
+
 #ifdef _DEBUG
 #define new DEBUG_NEW
 #endif
@@ -48,8 +49,6 @@ END_MESSAGE_MAP()
 
 // CRemoteClientDlg dialog
 
-
-
 CRemoteClientDlg::CRemoteClientDlg(CWnd* pParent /*=nullptr*/)
 	: CDialogEx(IDD_REMOTECLIENT_DIALOG, pParent)
 	, m_serv_address(0)
@@ -72,7 +71,7 @@ void CRemoteClientDlg::LoadFileCurrent()
 	HTREEITEM hTree = m_Tree.GetSelectedItem();
 	CString strPath = GetPath(hTree);
 	m_List.DeleteAllItems();
-	int nCmd = SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	int nCmd = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
 	PFILEINFO pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
 	CClientSocket* pClient = CClientSocket::GetInstance();
 	while (pInfo->HasNext) {
@@ -87,6 +86,9 @@ void CRemoteClientDlg::LoadFileCurrent()
 	}
 	pClient->CloseSocket();
 }
+
+//void CRemoteClientDlg::DealCommand(WORD nCmd, const std::string& strData, LPARAM lParam)
+
 
 void CRemoteClientDlg::threadEntryForWatchData(void* arg)
 {
@@ -226,7 +228,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	DeleteTreeChildrenItem(hTreeSelected);
 	m_List.DeleteAllItems();
 	CString strPath = GetPath(hTreeSelected);
-	int nCmd = SendCommandPacket(2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength());
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(), (WPARAM)hTreeSelected);
 	PFILEINFO pInfo = (PFILEINFO)CClientSocket::GetInstance()->GetPacket().strData.c_str();
 	CClientSocket* pClient = CClientSocket::GetInstance();
 	int Count = 0;
@@ -385,32 +387,32 @@ HCURSOR CRemoteClientDlg::OnQueryDragIcon()
 	return static_cast<HCURSOR>(m_hIcon);
 }
 
-//发送命令 + 同步等待服务器回复
-int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, size_t nLength)
-{
-	UpdateData();
-	CClientSocket* pClient = CClientSocket::GetInstance();
-	bool ret = pClient->InitSocket(m_serv_address, atoi((LPCTSTR)m_nPort));
-
-	if (!ret) {
-		AfxMessageBox(_T("网络初始化失败!"));
-		return -1;
-	}
-
-	CPacket pack(nCmd, pData, nLength);
-	ret = pClient->Send(pack);
-	TRACE("Send ret %d\r\n", ret);
-	int cmd = pClient->DealCommand();
-	TRACE("ack:%d\r\n", cmd);
-	if (bAutoClose)
-		pClient->CloseSocket();
-	return cmd;
-}
+////发送命令 + 同步等待服务器回复
+//int CRemoteClientDlg::SendCommandPacket(int nCmd, bool bAutoClose, BYTE* pData, size_t nLength)
+//{
+//	UpdateData();
+//	CClientSocket* pClient = CClientSocket::GetInstance();
+//	bool ret = pClient->InitSocket();
+//
+//	if (!ret) {
+//		AfxMessageBox(_T("网络初始化失败!"));
+//		return -1;
+//	}
+//
+//	CPacket pack(nCmd, pData, nLength);
+//	ret = pClient->Send(pack);
+//	TRACE("Send ret %d\r\n", ret);
+//	int cmd = pClient->DealCommand();
+//	TRACE("ack:%d\r\n", cmd);
+//	if (bAutoClose)
+//		pClient->CloseSocket();
+//	return cmd;
+//}
 
 
 void CRemoteClientDlg::OnBnClickedBtnTest()
 {
-	SendCommandPacket(1981);
+	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 1981);
 }
 
 // 树控件单击事件
@@ -449,7 +451,7 @@ void CRemoteClientDlg::OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult)
 // 点击按钮查看磁盘分区
 void CRemoteClientDlg::OnBnClickedBtnFileinfo()
 {
-	int ret = SendCommandPacket(1, false);
+	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 1, false);
 	if (ret == -1) {
 		AfxMessageBox(_T("命令处理失败!!!"));
 		return;
@@ -511,7 +513,7 @@ void CRemoteClientDlg::OnDeleteFile()
 	int nSelected = m_List.GetSelectionMark();//获取列表控件选中项索引
 	CString strFile = m_List.GetItemText(nSelected, 0);//文件名
 	CString strPath = GetPath(hSelected) + strFile;
-	int ret = SendCommandPacket(9, false, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
+	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 9, false, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
 	if (ret < 0)
 	{
 		AfxMessageBox(_T("打开文件命令失败!"));
@@ -529,7 +531,7 @@ void CRemoteClientDlg::OnRunFile()
 	CString strFile = m_List.GetItemText(m_List.GetSelectionMark(), 0);//文件名
 	CString strPath = GetPath(hSelected) + strFile;
 	int nSelected = m_List.GetSelectionMark();//获取列表控件选中项索引
-	int ret = SendCommandPacket(3, false, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
+	int ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(),3, false, (BYTE*)(LPCSTR)strPath, strPath.GetLength());
 	if (ret < 0)
 	{
 		AfxMessageBox(_T("打开文件命令失败!"));
@@ -551,19 +553,19 @@ LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
 	switch (cmd) {
 	case 4: {
 		CString strFile = (LPCSTR)lParam;
-		ret = SendCommandPacket(cmd, wParam & 1, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
+		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
 	}
 		  break;
 	case 5: {//鼠标操作
-		ret = SendCommandPacket(cmd, wParam & 1, (BYTE*)lParam, sizeof(MOUSEEV));
+		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1, (BYTE*)lParam, sizeof(MOUSEEV));
 	}
 		  break;
 	case 6:
-		ret = SendCommandPacket(cmd, wParam & 1,NULL,0);
+		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1,NULL,0);
 		break;
 	case 7:
 	case 8: {
-		ret = SendCommandPacket(cmd, wParam & 1);
+		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1);
 	}
 		  break;
 	default:
