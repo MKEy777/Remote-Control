@@ -230,60 +230,6 @@ void CRemoteClientDlg::InitUIData()
 	m_dlgStatus.ShowWindow(SW_HIDE);
 }
 
-void CRemoteClientDlg::threadEntryForWatchData(void* arg)
-{
-	CRemoteClientDlg* thiz = (CRemoteClientDlg*)arg;
-	thiz->threadWatchData();
-	_endthread();
-}
-
-void CRemoteClientDlg::threadWatchData()
-{
-	CClientSocket* pClient = NULL;
-	do {
-		pClient = CClientSocket::GetInstance();
-	} while (pClient==NULL);
-	//ULONGLONG tick = GetTickCount64();
-	while(!m_bStopWatch){
-		if (m_isFull == false) {
-			ULONGLONG tick = GetTickCount64();
-			int ret = SendMessage(WM_SEND_PACKET, 6 << 1 | 1);//发送请求截图命令，使用消息发送方式
-			if (ret == 6) {
-				BYTE* pData = (BYTE*)pClient->GetPacket().strData.c_str();
-				//存入CImage
-				HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);//创建一个全局内存块
-				if (hMem == NULL) {
-					TRACE("GlobalAlloc failed\r\n");
-					Sleep(10);
-					continue;
-				}
-				IStream* pStream = NULL;
-				HRESULT hRet = CreateStreamOnHGlobal(hMem, TRUE, &pStream);//把全局内存包装成一个 COM 流 (IStream)
-				if (hRet == S_OK) {
-					ULONG length = 0;//写入流的字节数
-					pStream->Write(pData, (ULONG)pClient->GetPacket().strData.size(), &length);//把数据写入流
-					LARGE_INTEGER bg = { 0 };
-					pStream->Seek(bg, STREAM_SEEK_SET, NULL);//把流的指针移到开头
-					// 如果 m_image 里已经有图了，先把它销毁
-					if (!m_image.IsNull()) {
-						m_image.Destroy();
-					}
-					m_image.Load(pStream);//从流中加载图像数据
-					m_isFull = true;
-				}
-			}
-			ULONGLONG elapsed = GetTickCount64() - tick;
-			if (elapsed < 50)
-			{
-				Sleep((DWORD)(50 - elapsed));
-			}
-		}
-		else {
-			Sleep(10);	
-		}
-		
-	}
-}
 
 void CRemoteClientDlg::threadEntryForDownFile(void* arg)
 {
@@ -432,9 +378,10 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_COMMAND(ID_DOWNLOAD_FILE, &CRemoteClientDlg::OnDownloadFile)
 	ON_COMMAND(ID_DELETE_FILE, &CRemoteClientDlg::OnDeleteFile)
 	ON_COMMAND(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
-	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::OnSendPacket) //注册消息③
 	ON_BN_CLICKED(IDC_BTN_START_WATCH, &CRemoteClientDlg::OnBnClickedBtnStartWatch)
 	ON_MESSAGE(WM_SEND_PACK_ACK, &CRemoteClientDlg::OnSendPackAck)
+	ON_EN_CHANGE(IDC_EDIT_PORT, &CRemoteClientDlg::OnEnChangeEditPort)
+	ON_NOTIFY(IPN_FIELDCHANGED, IDC_IPADDRESS_SERV, &CRemoteClientDlg::OnIpnFieldchangedIpaddressServ)
 END_MESSAGE_MAP()
 
 
@@ -671,50 +618,10 @@ void CRemoteClientDlg::OnRunFile()
 	return;
 }
 
-//消息响应函数
-LRESULT CRemoteClientDlg::OnSendPacket(WPARAM wParam, LPARAM lParam)
-{//实现消息响应函数④
-	/*
-	WPARAM wParam (命令号 * 2) + 开关
-	LPARAM lParam 把字符串在内存里的首地址（指针），强行转换成了一个整数传了过来
-	*/
-	int ret = 0;
-	int cmd = wParam >> 1;
-	switch (cmd) {
-	case 4: {
-		CString strFile = (LPCSTR)lParam;
-		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1, (BYTE*)(LPCSTR)strFile, strFile.GetLength());
-	}
-		  break;
-	case 5: {//鼠标操作
-		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1, (BYTE*)lParam, sizeof(MOUSEEV));
-	}
-		  break;
-	case 6:
-		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1,NULL,0);
-		break;
-	case 7:
-	case 8: {
-		ret = CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), cmd, wParam & 1);
-	}
-		  break;
-	default:
-		ret = -1;
-	}
-
-	return ret;
-}
 
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
-	m_isFull = false; // 重置状态，表示当前没有数据
-	m_bStopWatch = false;
-	CWatchDialog dlg(this);//创建观看对话框
-	HANDLE hThread=(HANDLE)_beginthread(CRemoteClientDlg::threadEntryForWatchData, 0, this);
-	//GetDlgItem(IDC_BTN_START_WATCH)->EnableWindow(FALSE);//禁用按钮
-	dlg.DoModal();//模态对话框
-	m_bStopWatch = true;
-	WaitForSingleObject(hThread, 500);
+	CClientController::getInstance()->StartWatchScreen();
 }
 
 LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
@@ -734,4 +641,21 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 		}
 	}
 	return 0;
+}
+
+void CRemoteClientDlg::OnEnChangeEditPort()
+{
+	UpdateData();
+	CClientController* pController = CClientController::getInstance();
+	pController->UpdateAddress(m_serv_address, atoi((LPCTSTR)m_nPort));
+}
+
+void CRemoteClientDlg::OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pResult)
+{
+	LPNMIPADDRESS pIPAddr = reinterpret_cast<LPNMIPADDRESS>(pNMHDR);
+	// TODO: 在此添加控件通知处理程序代码
+	*pResult = 0;
+	UpdateData();
+	CClientController* pController = CClientController::getInstance();
+	pController->UpdateAddress(m_serv_address, atoi((LPCTSTR)m_nPort));
 }

@@ -89,7 +89,8 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 			case 6:
 			{
 				Tool::Bytes2Image(m_image, head.strData);
-				CRect rect;
+				m_isFull = true;
+				/*CRect rect;
 				m_picture.GetWindowRect(rect);
 				m_nObjWidth = m_image.GetWidth();
 				m_nObjHeight = m_image.GetHeight();
@@ -97,7 +98,7 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 					m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
 				m_picture.InvalidateRect(NULL);
 				TRACE("更新图片完成%d %d %08X\r\n", m_nObjWidth, m_nObjHeight, (HBITMAP)m_image);
-				m_image.Destroy();
+				m_image.Destroy();*/
 				break;
 			}
 			case 5:
@@ -119,43 +120,37 @@ void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
 	if (nIDEvent == 0) {
-		CClientController* pParent = CClientController::getInstance();
-		if(m_isFull)
+		if (m_isFull)
 		{
-			CImage img;
-			pParent->GetImage(img);//获取图像引用
 			if (m_bFirstFrame)
 			{
 				int nToolBarHeight = 80;
-				// 1. 获取受控端屏幕的真实大小
-				int nWidth = img.GetWidth();
-				int nHeight = img.GetHeight();
-				// 2. 计算窗口边框大小
+				int nWidth = m_image.GetWidth();
+				int nHeight = m_image.GetHeight();
 				CRect rectWindow(0, 0, nWidth, nHeight + nToolBarHeight);
 				CalcWindowRect(&rectWindow);
-				// 3. 调整对话框窗口大小
 				SetWindowPos(NULL, 0, 0, rectWindow.Width(), rectWindow.Height(), SWP_NOMOVE | SWP_NOZORDER);
-				// 4. 调整内部 Picture Control 控件的大小，让它填满客户区
-				if (m_picture.GetSafeHwnd()) {
-					m_picture.MoveWindow(0, 0, nWidth, nHeight);
-				}
+
+				// 调整 Picture Control 大小
 				if (m_picture.GetSafeHwnd()) {
 					m_picture.MoveWindow(0, nToolBarHeight, nWidth, nHeight);
 				}
-				// 5. 居中显示并在调整后标记为 false
+
 				CenterWindow();
 				m_bFirstFrame = false;
 			}
+			CClientDC dc(&m_picture);
+
 			CRect rect;
-			m_picture.GetWindowRect(rect);//获取静态控件的矩形区域
-			HDC hdc = m_picture.GetDC()->GetSafeHdc();
-	
-			img.StretchBlt(hdc, 0, 0, rect.Width(), rect.Height(),SRCCOPY);//绘制图像
-			//m_picture.InvalidateRect(NULL);//使静态控件无效，准备重绘
-			//img.BitBlt(hdc, 0, 0, SRCCOPY);//绘制图像
-			img.Destroy();
-			m_isFull=false;
-			
+			m_picture.GetClientRect(rect); // 获取控件客户区大小
+
+			// 将成员变量 m_image 绘制到控件上
+			m_image.StretchBlt(dc.GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
+
+			m_image.Destroy();
+
+			// 重置标志位
+			m_isFull = false;
 		}
 	}
 	CDialog::OnTimer(nIDEvent);
