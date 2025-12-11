@@ -49,6 +49,20 @@ std::string GetErrInfo(int wsaErrcode) {
 	return ret;
 }
 
+void CClientSocket::threadFunc2()
+{
+	SetEvent(m_eventInvoke);
+	MSG msg;
+	while (::GetMessage(&msg, NULL, 0, 0)) {
+		TranslateMessage(&msg);
+		DispatchMessage(&msg);
+		TRACE("Get Message :%08X \r\n", msg.message);
+		if (m_mapFunc.find(msg.message) != m_mapFunc.end()) {
+			(this->*m_mapFunc[msg.message])(msg.message, msg.wParam, msg.lParam);
+		}
+	}
+}
+
 unsigned CClientSocket::threadEntry(void* arg)
 {
 	CClientSocket* thiz = (CClientSocket*)arg;

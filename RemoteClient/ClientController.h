@@ -21,6 +21,9 @@ public:
 	int initController();
 	//启动
 	int Invoke(CWnd*& pMainWnd);
+	void UpdateAddress(int nIP, int nPort) {
+		CClientSocket::GetInstance()->UpdateAddress(nIP, nPort);
+	}
 	//发送消息
 	bool SendCommandPacket(
 		HWND hWnd,//数据包受到后，需要应答的窗口

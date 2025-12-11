@@ -163,19 +163,7 @@ unsigned CClientController::threadEntry(void* arg)
 	return 0;
 }
 
-void CClientSocket::threadFunc2()
-{
-	SetEvent(m_eventInvoke);
-	MSG msg;
-	while (::GetMessage(&msg, NULL, 0, 0)) {
-		TranslateMessage(&msg);
-		DispatchMessage(&msg);
-		TRACE("Get Message :%08X \r\n", msg.message);
-		if (m_mapFunc.find(msg.message) != m_mapFunc.end()) {
-			(this->*m_mapFunc[msg.message])(msg.message, msg.wParam, msg.lParam);
-		}
-	}
-}
+
 
 LRESULT CClientController::OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {

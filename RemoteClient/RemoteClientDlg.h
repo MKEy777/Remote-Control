@@ -33,6 +33,8 @@ private:
 	bool m_bStopWatch;//停止监视标志
 
 private:
+	void DealCommand(WORD nCmd, const std::string& strData, LPARAM lParam);
+	void InitUIData();
 	//void DealCommand(WORD nCmd, const std::string& strData, LPARAM lParam);
 	static void threadEntryForWatchData(void* arg);
 	void threadWatchData();
@@ -40,6 +42,9 @@ private:
 	void threadDownFile();
 	void LoadFileInfo();
 	void LoadFileCurrent();
+	void Str2Tree(const std::string& drivers, CTreeCtrl& tree);
+	void UpdateFileInfo(const FILEINFO& finfo, HTREEITEM hParent);
+	void UpdateDownloadFile(const std::string& strData, FILE* pFile);
 	CString GetPath(HTREEITEM hTree);
 	void DeleteTreeChildrenItem(HTREEITEM hTree);
 	//1 查看磁盘分区
@@ -75,7 +80,7 @@ public:
 	afx_msg void OnNMRClickListFile(NMHDR* pNMHDR, LRESULT* pResult);
 	CTreeCtrl m_Tree;
 	CListCtrl m_List;
-	
+	afx_msg LRESULT OnSendPackAck(WPARAM wParam, LPARAM lParam);
 	afx_msg void OnBnClickedBtnFileinfo();
 	afx_msg void OnDownloadFile();
 	afx_msg void OnDeleteFile();

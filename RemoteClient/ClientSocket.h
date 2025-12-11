@@ -7,6 +7,10 @@
 #include <afxsock.h>
 #include <mutex>
 #include <map>
+#include <list>
+
+#pragma pack(push)
+#pragma pack(1)
 
 #define WM_SEND_PACK (WM_USER+1) //发送包数据
 #define WM_SEND_PACK_ACK (WM_USER+2) //发送包数据应答
@@ -105,9 +109,7 @@ public:
 		nSize = 0;
 	}
 
-	~CPacket() {
-
-	}
+	~CPacket() {}
 
 	int Size() {//包数据的大小
 		return nLength + 6;
@@ -288,6 +290,8 @@ public:
 private:
 	HANDLE m_eventInvoke;//启动事件
 	UINT m_nThreadID;
+	std::list<CPacket> m_lstSend;
+	std::map<HANDLE, std::list<CPacket>&> m_mapAck;//等待应答的包
 	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);
 	std::map<UINT, MSGFUNC> m_mapFunc;
 	HANDLE m_hThread;
@@ -296,6 +300,7 @@ private:
 	int m_nPort;//端口
 	bool m_bAutoClose;
 	std::mutex m_lock;
+	std::map<HANDLE, bool> m_mapAutoClosed;
 	size_t m_index = 0; // 记录缓冲区当前有效数据长度
 	SOCKET m_sock = INVALID_SOCKET;
 	CPacket m_packet;

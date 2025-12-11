@@ -87,8 +87,148 @@ void CRemoteClientDlg::LoadFileCurrent()
 	pClient->CloseSocket();
 }
 
-//void CRemoteClientDlg::DealCommand(WORD nCmd, const std::string& strData, LPARAM lParam)
+void CRemoteClientDlg::Str2Tree(const std::string& drivers, CTreeCtrl& tree)
+{
+	std::string dr;
+	tree.DeleteAllItems();
+	for (size_t i = 0; i < drivers.size(); i++)
+	{
+		if (drivers[i] == ',') {
+			dr += ":";
+			HTREEITEM hTemp = tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+			tree.InsertItem("", hTemp, TVI_LAST);
+			dr.clear();
+			continue;
+		}
+		dr += drivers[i];
+	}
+	if (dr.size() > 0) {
+		dr += ":";
+		HTREEITEM hTemp = tree.InsertItem(dr.c_str(), TVI_ROOT, TVI_LAST);
+		tree.InsertItem("", hTemp, TVI_LAST);
+	}
+}
 
+void CRemoteClientDlg::UpdateFileInfo(const FILEINFO& finfo, HTREEITEM hParent)
+{
+	TRACE("hasnext %d isdirectory %d %s\r\n", finfo.HasNext, finfo.IsDirectory, finfo.szFileName);
+	if (finfo.HasNext == FALSE)return;
+	if (finfo.IsDirectory) {
+		if (CString(finfo.szFileName) == "." || (CString(finfo.szFileName) == ".."))
+			return;
+		TRACE("hselected %08X %08X\r\n", hParent, m_Tree.GetSelectedItem());
+		HTREEITEM hTemp = m_Tree.InsertItem(finfo.szFileName, hParent);
+		m_Tree.InsertItem("", hTemp, TVI_LAST);
+		m_Tree.Expand(hParent, TVE_EXPAND);
+	}
+	else {
+		m_List.InsertItem(0, finfo.szFileName);
+	}
+}
+
+void CRemoteClientDlg::UpdateDownloadFile(const std::string& strData, FILE* pFile)
+{
+	static LONGLONG length = 0, index = 0;
+	TRACE("length %d index %d\r\n", length, index);
+	if (length == 0) {
+		length = *(long long*)strData.c_str();
+		if (length == 0) {
+			AfxMessageBox("文件长度为零或者无法读取文件！！！");
+			CClientController::getInstance()->DownloadEnd();
+		}
+	}
+	else if (length > 0 && (index >= length)) {
+		fclose(pFile);
+		length = 0;
+		index = 0;
+		CClientController::getInstance()->DownloadEnd();
+	}
+	else {
+		fwrite(strData.c_str(), 1, strData.size(), pFile);
+		index += strData.size();
+		TRACE("index = %d\r\n", index);
+		if (index >= length) {
+			fclose(pFile);
+			length = 0;
+			index = 0;
+			CClientController::getInstance()->DownloadEnd();
+		}
+	}
+}
+
+
+
+
+//void CRemoteClientDlg::DealCommand(WORD nCmd, const std::string& strData, LPARAM lParam)
+//{
+//	switch (nCmd) {
+//	case 1://获取驱动信息
+//		Str2Tree(strData, m_Tree);
+//		break;
+//	case 2://获取文件信息
+//		UpdateFileInfo(*(PFILEINFO)strData.c_str(), (HTREEITEM)lParam);
+//		break;
+//	case 3:
+//		MessageBox("打开文件完成！", "操作完成", MB_ICONINFORMATION);
+//		break;
+//	case 4:
+//		UpdateDownloadFile(strData, (FILE*)lParam);
+//		break;
+//	case 9:
+//		MessageBox("删除文件完成！", "操作完成", MB_ICONINFORMATION);
+//		break;
+//	case 1981:
+//		MessageBox("连接测试成功！", "连接成功", MB_ICONINFORMATION);
+//		break;
+//	default:
+//		TRACE("unknow data received! %d\r\n", nCmd);
+//		break;
+//	}
+//}
+//}
+
+void CRemoteClientDlg::DealCommand(WORD nCmd, const std::string& strData, LPARAM lParam)
+{
+	switch (nCmd) {
+	case 1://获取驱动信息
+		Str2Tree(strData, m_Tree);
+		break;
+	case 2://获取文件信息
+		UpdateFileInfo(*(PFILEINFO)strData.c_str(), (HTREEITEM)lParam);
+		break;
+	case 3:
+		MessageBox("打开文件完成！", "操作完成", MB_ICONINFORMATION);
+		break;
+	case 4:
+		UpdateDownloadFile(strData, (FILE*)lParam);
+		break;
+	case 9:
+		MessageBox("删除文件完成！", "操作完成", MB_ICONINFORMATION);
+		break;
+	case 1981:
+		MessageBox("连接测试成功！", "连接成功", MB_ICONINFORMATION);
+		break;
+	default:
+		TRACE("unknow data received! %d\r\n", nCmd);
+		break;
+	}
+}
+
+void CRemoteClientDlg::InitUIData()
+{
+	// 设置此对话框的图标。  当应用程序主窗口不是对话框时，框架将自动
+	//  执行此操作
+	SetIcon(m_hIcon, TRUE);			// 设置大图标
+	SetIcon(m_hIcon, FALSE);		// 设置小图标
+	UpdateData();
+	m_serv_address = 0x0100007F;//0x7F000001;//0xC0A80167;//192.168.1.103
+	m_nPort = _T("9527");
+	CClientController* pController = CClientController::getInstance();
+	pController->UpdateAddress(m_serv_address, atoi((LPCTSTR)m_nPort));
+	UpdateData(FALSE);
+	m_dlgStatus.Create(IDD_DLG_STATUS, this);
+	m_dlgStatus.ShowWindow(SW_HIDE);
+}
 
 void CRemoteClientDlg::threadEntryForWatchData(void* arg)
 {
@@ -294,6 +434,7 @@ BEGIN_MESSAGE_MAP(CRemoteClientDlg, CDialogEx)
 	ON_COMMAND(ID_RUN_FILE, &CRemoteClientDlg::OnRunFile)
 	ON_MESSAGE(WM_SEND_PACKET, &CRemoteClientDlg::OnSendPacket) //注册消息③
 	ON_BN_CLICKED(IDC_BTN_START_WATCH, &CRemoteClientDlg::OnBnClickedBtnStartWatch)
+	ON_MESSAGE(WM_SEND_PACK_ACK, &CRemoteClientDlg::OnSendPackAck)
 END_MESSAGE_MAP()
 
 
@@ -323,18 +464,7 @@ BOOL CRemoteClientDlg::OnInitDialog()
 		}
 	}
 
-	// Set the icon for this dialog.  The framework does this automatically
-	//  when the application's main window is not a dialog
-	SetIcon(m_hIcon, TRUE);			// Set big icon
-	SetIcon(m_hIcon, FALSE);		// Set small icon
-
-	// TODO: Add extra initialization here
-	UpdateData();
-	m_serv_address = 0x0100007F;//0x6538A8C0 192.168.56.101 
-	m_nPort = _T("9527");
-	UpdateData(FALSE);
-	m_dlgStatus.Create(IDD_DLG_STATUS, this);
-	m_dlgStatus.ShowWindow(SW_HIDE);
+	InitUIData();
 	return TRUE;  // 除非将焦点设置到控件，否则返回 TRUE
 }
 
@@ -585,4 +715,23 @@ void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 	dlg.DoModal();//模态对话框
 	m_bStopWatch = true;
 	WaitForSingleObject(hThread, 500);
+}
+
+LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
+{
+	if (lParam == -1 || (lParam == -2)) {
+		TRACE("socket is error %d\r\n", lParam);
+	}
+	else if (lParam == 1) {
+		//对方关闭了套接字
+		TRACE("socket is closed!\r\n");
+	}
+	else {
+		if (wParam != NULL) {
+			CPacket head = *(CPacket*)wParam;
+			delete (CPacket*)wParam;
+			DealCommand(head.sCmd, head.strData, lParam);
+		}
+	}
+	return 0;
 }
