@@ -129,15 +129,26 @@ void CRemoteClientDlg::UpdateFileInfo(const FILEINFO& finfo, HTREEITEM hParent)
 void CRemoteClientDlg::UpdateDownloadFile(const std::string& strData, FILE* pFile)
 {
 	static LONGLONG length = 0, index = 0;
-	TRACE("length %d index %d\r\n", length, index);
+	TRACE("length %lld index %lld\r\n", length, index);
+
 	if (length == 0) {
+		if (strData.size() == 0) {
+			TRACE("接收到结束包，忽略。\r\n");
+			return;
+		}
+
 		length = *(long long*)strData.c_str();
 		if (length == 0) {
 			AfxMessageBox("文件长度为零或者无法读取文件！！！");
+			if (pFile != nullptr) {
+				fclose(pFile);
+				pFile = nullptr;
+			}
 			CClientController::getInstance()->DownloadEnd();
 		}
 	}
 	else if (length > 0 && (index >= length)) {
+		// 正常下载完成
 		fclose(pFile);
 		length = 0;
 		index = 0;
@@ -146,8 +157,9 @@ void CRemoteClientDlg::UpdateDownloadFile(const std::string& strData, FILE* pFil
 	else {
 		fwrite(strData.c_str(), 1, strData.size(), pFile);
 		index += strData.size();
-		TRACE("index = %d\r\n", index);
+		TRACE("index = %lld\r\n", index);
 		if (index >= length) {
+			// 刚好拼完最后一个包
 			fclose(pFile);
 			length = 0;
 			index = 0;
@@ -155,37 +167,6 @@ void CRemoteClientDlg::UpdateDownloadFile(const std::string& strData, FILE* pFil
 		}
 	}
 }
-
-
-
-
-//void CRemoteClientDlg::DealCommand(WORD nCmd, const std::string& strData, LPARAM lParam)
-//{
-//	switch (nCmd) {
-//	case 1://获取驱动信息
-//		Str2Tree(strData, m_Tree);
-//		break;
-//	case 2://获取文件信息
-//		UpdateFileInfo(*(PFILEINFO)strData.c_str(), (HTREEITEM)lParam);
-//		break;
-//	case 3:
-//		MessageBox("打开文件完成！", "操作完成", MB_ICONINFORMATION);
-//		break;
-//	case 4:
-//		UpdateDownloadFile(strData, (FILE*)lParam);
-//		break;
-//	case 9:
-//		MessageBox("删除文件完成！", "操作完成", MB_ICONINFORMATION);
-//		break;
-//	case 1981:
-//		MessageBox("连接测试成功！", "连接成功", MB_ICONINFORMATION);
-//		break;
-//	default:
-//		TRACE("unknow data received! %d\r\n", nCmd);
-//		break;
-//	}
-//}
-//}
 
 void CRemoteClientDlg::DealCommand(WORD nCmd, const std::string& strData, LPARAM lParam)
 {
