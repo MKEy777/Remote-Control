@@ -109,6 +109,7 @@ void CRemoteClientDlg::Str2Tree(const std::string& drivers, CTreeCtrl& tree)
 	}
 }
 
+// 更新文件信息
 void CRemoteClientDlg::UpdateFileInfo(const FILEINFO& finfo, HTREEITEM hParent)
 {
 	TRACE("hasnext %d isdirectory %d %s\r\n", finfo.HasNext, finfo.IsDirectory, finfo.szFileName);
@@ -125,7 +126,7 @@ void CRemoteClientDlg::UpdateFileInfo(const FILEINFO& finfo, HTREEITEM hParent)
 		m_List.InsertItem(0, finfo.szFileName);
 	}
 }
-
+// 下载文件
 void CRemoteClientDlg::UpdateDownloadFile(const std::string& strData, FILE* pFile)
 {
 	static LONGLONG length = 0, index = 0;
@@ -148,7 +149,6 @@ void CRemoteClientDlg::UpdateDownloadFile(const std::string& strData, FILE* pFil
 		}
 	}
 	else if (length > 0 && (index >= length)) {
-		// 正常下载完成
 		fclose(pFile);
 		length = 0;
 		index = 0;
@@ -159,7 +159,6 @@ void CRemoteClientDlg::UpdateDownloadFile(const std::string& strData, FILE* pFil
 		index += strData.size();
 		TRACE("index = %lld\r\n", index);
 		if (index >= length) {
-			// 刚好拼完最后一个包
 			fclose(pFile);
 			length = 0;
 			index = 0;
@@ -281,7 +280,7 @@ void CRemoteClientDlg::threadDownFile()
 	EndWaitCursor();//隐藏等待光标
 	MessageBox("文件下载完成!");
 }
-
+//加载文件信息
 void CRemoteClientDlg::LoadFileInfo()
 {
 	CPoint ptMouse;
@@ -297,7 +296,7 @@ void CRemoteClientDlg::LoadFileInfo()
 	CString strPath = GetPath(hTreeSelected);
 	CClientController::getInstance()->SendCommandPacket(GetSafeHwnd(), 2, false, (BYTE*)(LPCTSTR)strPath, strPath.GetLength(), (WPARAM)hTreeSelected);
 }
-
+//获取树控件某节点的完整路径
 CString CRemoteClientDlg::GetPath(HTREEITEM hTree)
 {
 	CString strRet, strTmp;
