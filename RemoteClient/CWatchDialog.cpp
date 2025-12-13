@@ -88,21 +88,48 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 			switch (head.sCmd) {
 			case 6:
 			{
+				// 1. 将字节流转换为图片
 				Tool::Bytes2Image(m_image, head.strData);
+
+				// 2. 检查图片是否有效
 				if (m_image.IsNull() == false) {
 					m_nObjWidth = m_image.GetWidth();
 					m_nObjHeight = m_image.GetHeight();
+
+					// 如果是第一帧，调整窗口大小以适应远程屏幕分辨率
+					if (m_bFirstFrame)
+					{
+						int nToolBarHeight = 80; // 预留工具栏高度，根据实际布局调整
+						int nWidth = m_nObjWidth;
+						int nHeight = m_nObjHeight;
+
+						// 计算包含边框和标题栏的窗口大小
+						CRect rectWindow(0, 0, nWidth, nHeight + nToolBarHeight);
+						CalcWindowRect(&rectWindow);// 调整为窗口大小
+
+						// 设置主窗口大小
+						SetWindowPos(NULL, 0, 0, rectWindow.Width(), rectWindow.Height(), SWP_NOMOVE | SWP_NOZORDER);
+
+						// 调整 Picture Control 大小，使其位于工具栏下方
+						if (m_picture.GetSafeHwnd()) {
+							m_picture.MoveWindow(0, nToolBarHeight, nWidth, nHeight);
+						}
+
+						CenterWindow();
+						m_bFirstFrame = false;
+					}
+					// 获取 Picture Control 的设备上下文
+					CClientDC dc(&m_picture);
+					CRect rect;
+					m_picture.GetClientRect(rect); // 获取控件客户区大小
+
+					// 使用 StretchBlt 进行拉伸绘制，适应控件大小
+					m_image.StretchBlt(dc.GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
+					// 销毁图片对象，释放资源
+					m_image.Destroy();
 				}
-				m_isFull = true;
-				/*CRect rect;
-				m_picture.GetWindowRect(rect);
-				m_nObjWidth = m_image.GetWidth();
-				m_nObjHeight = m_image.GetHeight();
-				m_image.StretchBlt(
-					m_picture.GetDC()->GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
-				m_picture.InvalidateRect(NULL);
-				TRACE("更新图片完成%d %d %08X\r\n", m_nObjWidth, m_nObjHeight, (HBITMAP)m_image);
-				m_image.Destroy();*/
+				// 重置标志位 
+				m_isFull = false;
 				break;
 			}
 			case 5:
@@ -123,40 +150,40 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
 {
 	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	if (nIDEvent == 0) {
-		if (m_isFull)
-		{
-			if (m_bFirstFrame)
-			{
-				int nToolBarHeight = 80;
-				int nWidth = m_image.GetWidth();
-				int nHeight = m_image.GetHeight();
-				CRect rectWindow(0, 0, nWidth, nHeight + nToolBarHeight);
-				CalcWindowRect(&rectWindow);
-				SetWindowPos(NULL, 0, 0, rectWindow.Width(), rectWindow.Height(), SWP_NOMOVE | SWP_NOZORDER);
+	//if (nIDEvent == 0) {
+	//	if (m_isFull)
+	//	{
+	//		if (m_bFirstFrame)
+	//		{
+	//			int nToolBarHeight = 80;
+	//			int nWidth = m_image.GetWidth();
+	//			int nHeight = m_image.GetHeight();
+	//			CRect rectWindow(0, 0, nWidth, nHeight + nToolBarHeight);
+	//			CalcWindowRect(&rectWindow);
+	//			SetWindowPos(NULL, 0, 0, rectWindow.Width(), rectWindow.Height(), SWP_NOMOVE | SWP_NOZORDER);
 
-				// 调整 Picture Control 大小
-				if (m_picture.GetSafeHwnd()) {
-					m_picture.MoveWindow(0, nToolBarHeight, nWidth, nHeight);
-				}
+	//			// 调整 Picture Control 大小
+	//			if (m_picture.GetSafeHwnd()) {
+	//				m_picture.MoveWindow(0, nToolBarHeight, nWidth, nHeight);
+	//			}
 
-				CenterWindow();
-				m_bFirstFrame = false;
-			}
-			CClientDC dc(&m_picture);
+	//			CenterWindow();
+	//			m_bFirstFrame = false;
+	//		}
+	//		CClientDC dc(&m_picture);
 
-			CRect rect;
-			m_picture.GetClientRect(rect); // 获取控件客户区大小
+	//		CRect rect;
+	//		m_picture.GetClientRect(rect); // 获取控件客户区大小
 
-			// 将成员变量 m_image 绘制到控件上
-			m_image.StretchBlt(dc.GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
+	//		// 将成员变量 m_image 绘制到控件上
+	//		m_image.StretchBlt(dc.GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
 
-			m_image.Destroy();
+	//		m_image.Destroy();
 
-			// 重置标志位
-			m_isFull = false;
-		}
-	}
+	//		// 重置标志位
+	//		m_isFull = false;
+	//	}
+	//}
 	CDialog::OnTimer(nIDEvent);
 }
 
