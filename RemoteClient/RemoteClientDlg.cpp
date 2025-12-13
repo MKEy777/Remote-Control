@@ -568,19 +568,19 @@ void CRemoteClientDlg::OnRunFile()
 	}
 }
 
-
+// 开始监视屏幕按钮点击事件
 void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 {
 	CClientController::getInstance()->StartWatchScreen();
 }
 
+// 处理接收到的数据包
 LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 {
 	if (lParam == -1 || (lParam == -2)) {
 		TRACE("socket is error %d\r\n", lParam);
 	}
 	else if (lParam == 1) {
-		//对方关闭了套接字
 		TRACE("socket is closed!\r\n");
 	}
 	else {
@@ -593,6 +593,7 @@ LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 	return 0;
 }
 
+// 端口号修改事件
 void CRemoteClientDlg::OnEnChangeEditPort()
 {
 	UpdateData();
@@ -600,6 +601,7 @@ void CRemoteClientDlg::OnEnChangeEditPort()
 	pController->UpdateAddress(m_serv_address, atoi((LPCTSTR)m_nPort));
 }
 
+// IP地址修改事件
 void CRemoteClientDlg::OnIpnFieldchangedIpaddressServ(NMHDR* pNMHDR, LRESULT* pResult)
 {
 	LPNMIPADDRESS pIPAddr = reinterpret_cast<LPNMIPADDRESS>(pNMHDR);

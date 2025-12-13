@@ -4,33 +4,49 @@
 CClientSocket* CClientSocket::m_instance = nullptr;
 CClientSocket::CHelper CClientSocket::m_helper;
 
-CClientSocket::CClientSocket() :
-	m_nIP(INADDR_ANY), m_nPort(0), m_sock(INVALID_SOCKET), m_bAutoClose(true), m_index(0),
-	m_hThread(INVALID_HANDLE_VALUE)
+CClientSocket::CClientSocket()
+	: m_nIP(INADDR_ANY), m_nPort(0), m_sock(INVALID_SOCKET),
+	m_bAutoClose(true), m_index(0), m_hThread(INVALID_HANDLE_VALUE),
+	m_eventInvoke(NULL), m_nThreadID(0)
 {
-	if (InitSockEnv() == FALSE) {
-		MessageBox(NULL, _T("无法初始化套接字环境,请检查网络设置！"), _T("初始化错误！"), MB_OK | MB_ICONERROR);
-		exit(0);
+	// 初始化套接字环境
+	if (!InitSockEnv()) {
+		MessageBox(NULL, _T("无法初始化套接字环境!"), _T("错误"), MB_OK | MB_ICONERROR);
+		throw std::runtime_error("InitSockEnv failed");
 	}
+
+	// 创建事件句柄（手动重置，初始状态为未触发）
 	m_eventInvoke = CreateEvent(NULL, TRUE, FALSE, NULL);
-	m_hThread = (HANDLE)_beginthreadex(NULL, 0, &CClientSocket::threadEntry, this, 0, &m_nThreadID);
-	if (WaitForSingleObject(m_eventInvoke, 100) == WAIT_TIMEOUT) {
-		TRACE("网络消息处理线程启动失败了！\r\n");
+	if (!m_eventInvoke) {
+		TRACE("CreateEvent failed: %d\n", GetLastError());
+		throw std::runtime_error("CreateEvent failed");
 	}
-	CloseHandle(m_eventInvoke);
+
+	// 初始化接收缓冲区
 	m_buffer.resize(BUFFER_SIZE);
 	memset(m_buffer.data(), 0, BUFFER_SIZE);
-	struct {
-		UINT message;
-		MSGFUNC func;
-	}funcs[] = {
-		{WM_SEND_PACK,&CClientSocket::SendPack},
-		{0,NULL}
+
+	// 使用 vector 替代静态数组，避免成员函数指针对齐问题
+	std::vector<std::pair<UINT, MSGFUNC>> funcs = {
+		{ WM_SEND_PACK, &CClientSocket::SendPack }
 	};
-	for (int i = 0; funcs[i].message != 0; i++) {
-		if (m_mapFunc.insert(std::pair<UINT, MSGFUNC>(funcs[i].message, funcs[i].func)).second == false) {
-			TRACE("插入失败，消息值：%d 函数值:%08X 序号:%d\r\n", funcs[i].message, funcs[i].func, i);
+
+	for (auto& f : funcs) {
+		if (!m_mapFunc.insert({ f.first, f.second }).second) {
+			TRACE("插入失败 消息 %d\n", f.first);
 		}
+	}
+
+	// 启动接收线程
+	m_hThread = (HANDLE)_beginthreadex(NULL, 0, threadEntry, this, 0, &m_nThreadID);
+	if (!m_hThread) {
+		TRACE("线程启动失败!\n");
+		throw std::runtime_error("Thread start failed");
+	}
+	// 等待线程启动完成
+	DWORD dw = WaitForSingleObject(m_eventInvoke, 1000); // 等 1 秒
+	if (dw == WAIT_TIMEOUT) {
+		TRACE("线程启动超时\n");
 	}
 }
 
@@ -49,9 +65,19 @@ std::string GetErrInfo(int wsaErrcode) {
 	return ret;
 }
 
+//typedef struct tagMSG {
+//	HWND        hwnd;
+//	UINT        message;
+//	WPARAM      wParam;
+//	LPARAM      lParam;
+//	DWORD       time;
+//	POINT       pt;
+//} MSG
 void CClientSocket::threadFunc2()
 {
-	SetEvent(m_eventInvoke);
+	if (m_eventInvoke) {
+		SetEvent(m_eventInvoke); // 唤醒构造函数等待
+	}
 	MSG msg;
 	while (::GetMessage(&msg, NULL, 0, 0)) {
 		TranslateMessage(&msg);
@@ -71,6 +97,45 @@ unsigned CClientSocket::threadEntry(void* arg)
 	return 0;
 }
 
+int CClientSocket::DealCommand()
+{
+	if (m_sock == -1) return -1;
+	char* buffer = m_buffer.data();
+	if (buffer == NULL) {
+		TRACE("内存不足！\r\n");
+		return -2;
+	}
+	while (true) {
+		// 先看看缓冲区里现有的数据够不够拼成一个包
+		size_t parse_len = m_index;// 把当前缓冲区数据长度传进去
+		m_packet = CPacket((BYTE*)buffer, parse_len);
+
+		if (parse_len > 0) {
+			// 发现完整包，处理掉，把剩下的移到前面
+			memmove(buffer, buffer + parse_len, m_index - parse_len);
+			m_index -= parse_len;
+			return m_packet.sCmd;
+		}
+
+		// 缓冲区数据不够，继续接收
+		if (m_index >= m_buffer.size()) {
+			size_t new_size = m_buffer.size() * 2;
+			// 可以在这里加个上限，防止恶意攻击撑爆内存
+			if (new_size > 1024 * 1024 * 50) return -1;
+			m_buffer.resize(new_size);
+			buffer = m_buffer.data();
+		}
+
+		int len_received = recv(m_sock, buffer + m_index, BUFFER_SIZE - m_index, 0);
+		if (len_received <= 0) {
+			// 只有当真正断开或出错时才复位
+			return -1;
+		}
+		m_index += len_received;
+	}
+	return -1;
+}
+
 bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed, WPARAM wParam)
 {
 	UINT nMode = isAutoClosed ? CSM_AUTOCLOSE : 0;
@@ -85,7 +150,7 @@ bool CClientSocket::SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed
 }
 
 void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
-{//TODO:定义一个消息的数据结构(数据和数据长度，模式) 回调消息的的数据结构(HWND))
+{//定义一个消息的数据结构(数据和数据长度，模式) 回调消息的的数据结构(HWND))
 	PACKET_DATA data = *(PACKET_DATA*)wParam;
 	delete (PACKET_DATA*)wParam;
 	HWND hWnd = (HWND)lParam;
@@ -115,21 +180,18 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
 						index -= nLen;
 						memmove(pBuffer, pBuffer + nLen, index);
 					}
-				}
-				else {//TODO：对方关闭了套接字，或者网络设备异常
+				}else {//对方关闭了套接字，或者网络设备异常
 					TRACE("recv failed length %d index %d cmd %d\r\n", length, index, current.sCmd);
 					CloseSocket();
 					::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(current.sCmd, NULL, 0), 1);
 				}
 			}
-		}
-		else {
+		}else {
 			CloseSocket();
 			//网络终止处理
 			::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -1);
 		}
-	}
-	else {
+	}else {
 		::SendMessage(hWnd, WM_SEND_PACK_ACK, NULL, -2);
 	}
 }

@@ -15,8 +15,8 @@ CClientController* CClientController::getInstance()
 		struct { UINT nMsg; MSGFUNC func; }MsgFuncs[] = {
 			{WM_SHOW_STATUS,&CClientController::OnShowStatus},
 			{WM_SHOW_WATCH,&CClientController::OnShowWatcher},
-			{WM_SEND_PACKET,&CClientController::OnSendPacket},
-			{WM_SEND_DATA,&CClientController::OnSendData},
+			//{WM_SEND_PACKET,&CClientController::OnSendPacket},
+			//{WM_SEND_DATA,&CClientController::OnSendData},
 			{(UINT)-1,NULL}
 		};
 		for (int i = 0; MsgFuncs[i].func != NULL; i++) {

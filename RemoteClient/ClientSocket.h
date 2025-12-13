@@ -17,7 +17,7 @@
 
 class CPacket {
 public:
-	CPacket() :sHead(0), nLength(0), sCmd(0), strData(""), sSum(0) {}
+	CPacket() = default;
 	CPacket& operator=(const CPacket& packet) {
 		if (this != &packet) {
 			sHead = packet.sHead;
@@ -124,12 +124,12 @@ public:
 		*(WORD*)pData = sSum;
 		return strOut.c_str();
 	}
-	WORD sHead;         //包头
-	DWORD nLength;      //包长度,从命令字段到校验码的总长度
-	WORD sCmd;          //命令字
-	std::string strData;//数据
-	WORD sSum;          //校验和
-	std::string strOut;//整个包的数据
+	WORD sHead = 0;
+	DWORD nLength = 0;
+	WORD sCmd = 0;
+	WORD sSum = 0;
+	std::string strData;
+	std::string strOut;
 };
 typedef struct MouseEvent {
 	MouseEvent() {
@@ -161,7 +161,7 @@ enum {
 
 typedef struct PacketData {
 	std::string strData;
-	UINT nMode;
+	UINT nMode;//AUTOCLOSE
 	WPARAM wParam;
 	PacketData(const char* pData, size_t nLen, UINT mode, WPARAM nParam = 0) {
 		strData.resize(nLen);
@@ -218,53 +218,19 @@ public:
 	
 	 //在“接收线程”里不停解析服务器发来的数据包。
 #define BUFFER_SIZE 20480000
-	int DealCommand() {
-		if (m_sock == -1) return -1;
-		char* buffer = m_buffer.data();
-		if (buffer == NULL) {
-			TRACE("内存不足！\r\n");
-			return -2;
-		}
-		while (true) {
-			// 先看看缓冲区里现有的数据够不够拼成一个包
-			size_t parse_len = m_index;// 把当前缓冲区数据长度传进去
-			m_packet = CPacket((BYTE*)buffer, parse_len);
+	int DealCommand();
 
-			if (parse_len > 0) {
-				// 发现完整包，处理掉，把剩下的移到前面
-				memmove(buffer, buffer + parse_len, m_index - parse_len);
-				m_index -= parse_len;
-				return m_packet.sCmd;
-			}
-
-			// 缓冲区数据不够，继续接收
-			if (m_index >= m_buffer.size()) {
-				size_t new_size = m_buffer.size() * 2;
-				// 可以在这里加个上限，防止恶意攻击撑爆内存
-				if (new_size > 1024 * 1024 * 50) return -1;
-				m_buffer.resize(new_size);
-				buffer = m_buffer.data();
-			}
-
-			int len_received = recv(m_sock, buffer + m_index, BUFFER_SIZE - m_index, 0);
-			if (len_received <= 0) {
-				// 只有当真正断开或出错时才复位
-				return -1;
-			}
-			m_index += len_received;
-		}
-		return -1;
-	}
+	//主要用于发送数据到服务端，然后接收从服务端返回的消息，并且SendMessage()到对应的界面回调函数中
 	bool SendPacket(HWND hWnd, const CPacket& pack, bool isAutoClosed = true, WPARAM wParam = 0);
 	
-	bool GetFilePath(std::string& strPath) {
+	/*bool GetFilePath(std::string& strPath) {
 		if (m_packet.sCmd >= 2 && m_packet.sCmd <= 4) {
 			strPath = m_packet.strData;
 			return true;
 		}
 		return false;
-	}
-	bool GetMouseEvent(MOUSEEV& MouseEv) {
+	}*/
+	/*bool GetMouseEvent(MOUSEEV& MouseEv) {
 		if (m_packet.sCmd == 5) {
 			if (m_packet.strData.size() == sizeof(MOUSEEV)) {
 				memcpy(&MouseEv, m_packet.strData.c_str(), sizeof(MOUSEEV));
@@ -272,7 +238,7 @@ public:
 			}
 		}
 		return false;
-	}
+	}*/
 	void CloseSocket() {
 		closesocket(m_sock);
 		m_sock = INVALID_SOCKET;
@@ -287,27 +253,46 @@ public:
 		}
 	}
 private:
-	HANDLE m_eventInvoke;//启动事件
-	UINT m_nThreadID;
-	std::list<CPacket> m_lstSend;
+	HANDLE m_eventInvoke = NULL;
+	UINT   m_nThreadID = 0;
+	HANDLE m_hThread = INVALID_HANDLE_VALUE;
+
+	int    m_nIP = INADDR_ANY;
+	int    m_nPort = 0;
+	bool   m_bAutoClose = true;
+
+	size_t m_index = 0;// 记录缓冲区当前有效数据长度
+	SOCKET m_sock = INVALID_SOCKET;
 	std::map<HANDLE, std::list<CPacket>&> m_mapAck;//等待应答的包
-	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);
+	typedef void(CClientSocket::* MSGFUNC)(UINT nMsg, WPARAM wParam, LPARAM lParam);//指向类的非 static 成员函数
 	std::map<UINT, MSGFUNC> m_mapFunc;
-	HANDLE m_hThread;
 	std::vector<char> m_buffer;
-	int m_nIP;//地址
-	int m_nPort;//端口
-	bool m_bAutoClose;
 	std::mutex m_lock;
 	std::map<HANDLE, bool> m_mapAutoClosed;
-	size_t m_index = 0; // 记录缓冲区当前有效数据长度
-	SOCKET m_sock = INVALID_SOCKET;
 	CPacket m_packet;
-	CClientSocket& operator=(const CClientSocket& ss) {}
-	CClientSocket(const CClientSocket& ss) {};
+	CClientSocket& operator=(const CClientSocket& ss) = delete;
+	CClientSocket(const CClientSocket& ss)= delete;
 	CClientSocket();
 	~CClientSocket() {
-		closesocket(m_sock);
+		if (m_hThread != INVALID_HANDLE_VALUE) {
+			PostThreadMessage(m_nThreadID, WM_QUIT, 0, 0); // 告诉线程退出
+			WaitForSingleObject(m_hThread, INFINITE);
+			CloseHandle(m_hThread);
+			m_hThread = INVALID_HANDLE_VALUE;
+		}
+
+		// 关闭事件句柄
+		if (m_eventInvoke) {
+			CloseHandle(m_eventInvoke);
+			m_eventInvoke = NULL;
+		}
+
+		// 关闭套接字
+		if (m_sock != INVALID_SOCKET) {
+			closesocket(m_sock);
+			m_sock = INVALID_SOCKET;
+		}
+
 		WSACleanup();
 	}
 
