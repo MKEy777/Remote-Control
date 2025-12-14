@@ -239,13 +239,41 @@ int CCommand::SendScreen(std::list<CPacket>& lstPacket, CPacket& inPacket) {
     SetStretchBltMode(hDestDC, HALFTONE);
     StretchBlt(hDestDC, 0, 0, nDestWidth, nDestHeight, hScreen, 0, 0, nWidth, nHeight, SRCCOPY);
 
+    CURSORINFO ci;
+    memset(&ci, 0, sizeof(ci));
+    ci.cbSize = sizeof(ci);
+    if (GetCursorInfo(&ci) && (ci.flags == CURSOR_SHOWING)) {
+        // 复制一份光标图标，避免线程冲突
+        HICON hIcon = CopyIcon(ci.hCursor);
+        if (hIcon) {
+            ICONINFO ii;
+            // 获取光标的详细信息，主要是为了拿到热点（Hotspot）
+            if (GetIconInfo(hIcon, &ii)) {
+                // 计算光标左上角在原始屏幕上的坐标
+                int x = ci.ptScreenPos.x - ii.xHotspot;
+                int y = ci.ptScreenPos.y - ii.yHotspot;
+                // 如果屏幕被缩放了（比如宽大于1920的情况），光标坐标也要跟着缩放
+                if (nDestWidth != nWidth) {
+                    x = x * nDestWidth / nWidth;
+                    y = y * nDestHeight / nHeight;
+                }
+                // 把光标画到内存 DC 上
+                ::DrawIcon(hDestDC, x, y, hIcon);
+                if (ii.hbmMask) DeleteObject(ii.hbmMask);
+                if (ii.hbmColor) DeleteObject(ii.hbmColor);
+            }
+            // 销毁复制的光标句柄
+            DestroyIcon(hIcon);
+        }
+    }
+
     ReleaseDC(NULL, hScreen);
     HGLOBAL hMem = GlobalAlloc(GMEM_MOVEABLE, 0);
     if (hMem == NULL) return -1;
     IStream* pStream = NULL;
     HRESULT ret = CreateStreamOnHGlobal(hMem, TRUE, &pStream);
     if (ret == S_OK) {
-        screen.Save(pStream, Gdiplus::ImageFormatPNG);
+        screen.Save(pStream, Gdiplus::ImageFormatJPEG);
         LARGE_INTEGER bg = { 0 };
         pStream->Seek(bg, STREAM_SEEK_SET, NULL);
         PBYTE pData = (PBYTE)GlobalLock(hMem);

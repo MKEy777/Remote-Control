@@ -172,7 +172,11 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
 					if (nLen > 0) {
 						TRACE("ack pack %d to hWnd %08X %d %d\r\n", pack.sCmd, hWnd, index, nLen);
 						TRACE("%04X\r\n", *(WORD*)(pBuffer + nLen));
-						::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(pack), data.wParam);
+						CPacket* pNewPack = new CPacket(pack);
+						if (::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)pNewPack, data.wParam) == 0) {
+							delete pNewPack;
+							TRACE("SendMessage failed! Packet deleted manually.\r\n");
+						}
 						if (data.nMode & CSM_AUTOCLOSE) {
 							CloseSocket();
 							return;
@@ -183,7 +187,10 @@ void CClientSocket::SendPack(UINT nMsg, WPARAM wParam, LPARAM lParam)
 				}else {//对方关闭了套接字，或者网络设备异常
 					TRACE("recv failed length %d index %d cmd %d\r\n", length, index, current.sCmd);
 					CloseSocket();
-					::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)new CPacket(current.sCmd, NULL, 0), 1);
+					CPacket* pErrPack = new CPacket(current.sCmd, NULL, 0);
+					if (::SendMessage(hWnd, WM_SEND_PACK_ACK, (WPARAM)pErrPack, 1) == 0) {
+						delete pErrPack;
+					}
 				}
 			}
 		}else {
