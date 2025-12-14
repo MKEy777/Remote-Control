@@ -201,7 +201,7 @@ void CRemoteClientDlg::InitUIData()
 	SetIcon(m_hIcon, TRUE);			// 设置大图标
 	SetIcon(m_hIcon, FALSE);		// 设置小图标
 	UpdateData();
-	m_serv_address = 0x0100007F;//0xC0A83865;//0xC0A80167;//192.168.1.103
+	m_serv_address = 0x0100007F;//0x7F000001;//0xC0A80167;//192.168.1.103
 	m_nPort = _T("9527");
 	CClientController* pController = CClientController::getInstance();
 	pController->UpdateAddress(m_serv_address, atoi((LPCTSTR)m_nPort));
@@ -577,23 +577,20 @@ void CRemoteClientDlg::OnBnClickedBtnStartWatch()
 // 处理接收到的数据包
 LRESULT CRemoteClientDlg::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 {
-	if (lParam != -1 && lParam != -2 && lParam != 1) {
-		if (wParam != NULL) {
-			CPacket* pPacket = (CPacket*)wParam;
-			DealCommand(pPacket->sCmd, pPacket->strData, lParam);
-		}
+	if (lParam == -1 || (lParam == -2)) {
+		TRACE("socket is error %d\r\n", lParam);
 	}
 	else if (lParam == 1) {
 		TRACE("socket is closed!\r\n");
 	}
 	else {
-		TRACE("socket is error %d\r\n", lParam);
+		if (wParam != NULL) {
+			CPacket head = *(CPacket*)wParam;
+			delete (CPacket*)wParam;
+			DealCommand(head.sCmd, head.strData, lParam);
+		}
 	}
-	if (wParam != NULL) {
-		delete (CPacket*)wParam;
-	}
-
-	return 1;
+	return 0;
 }
 
 // 端口号修改事件

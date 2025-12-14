@@ -45,33 +45,23 @@ public:
 			return 0;
 		}
 protected:
-	bool InitSocket(short port) {
-		if (m_sock == -1) return false;
+		bool InitSocket(short port) {
+			if (m_sock == -1) return false;
 
-		sockaddr_in serv_adr;
-		memset(&serv_adr, 0, sizeof(serv_adr));
-		serv_adr.sin_family = AF_INET;
-		serv_adr.sin_addr.s_addr = INADDR_ANY;
-		serv_adr.sin_port = htons(port);
+			sockaddr_in serv_adr;
+			memset(&serv_adr, 0, sizeof(serv_adr));
+			serv_adr.sin_family = AF_INET;
+			serv_adr.sin_addr.s_addr = INADDR_ANY;
+			serv_adr.sin_port = htons(port);
 
-		if (bind(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {
-			int err = WSAGetLastError(); // 获取具体的错误代码
-			CString strErr;
-			strErr.Format(_T("Bind 绑定端口失败，错误码: %d"), err);
-			::MessageBox(NULL, strErr, _T("网络初始化错误"), MB_OK | MB_ICONERROR);
-			return false;
+			if (bind(m_sock, (sockaddr*)&serv_adr, sizeof(serv_adr)) == -1) {// 绑定套接字；(套接字，地址结构体指针，结构体大小)
+				return false;
+			}
+			if (listen(m_sock, 1) == -1) { // 监听连接；(套接字，等待队列大小)
+				return false;
+			}
+			return true;
 		}
-
-		if (listen(m_sock, 1) == -1) {
-			int err = WSAGetLastError();
-			CString strErr;
-			strErr.Format(_T("Listen 监听失败，错误码: %d"), err);
-			::MessageBox(NULL, strErr, _T("网络初始化错误"), MB_OK | MB_ICONERROR);
-			return false;
-		}
-
-		return true;
-	}
 		bool AcceptClient() {
 			sockaddr_in client_adr;
 			int cli_sz = sizeof(client_adr);
