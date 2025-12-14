@@ -46,7 +46,7 @@ int main()
 			switch (ret)
 			{
 			case -1:
-				MessageBox(NULL, _T("网络初始化异常，未能成功初始hi，请检查网络状态！"), _T("网络初始化失败"), MB_OK | MB_ICONERROR);
+				MessageBox(NULL, _T("网络初始化异常，未能成功初始化，请检查网络状态！"), _T("网络初始化失败"), MB_OK | MB_ICONERROR);
 				exit(0);
 				break;
 			case -2:

@@ -54,7 +54,7 @@ BOOL CWatchDialog::OnInitDialog()
 	CDialog::OnInitDialog();
 	m_isFull = false;
 	// TODO:  在此添加额外的初始化
-	SetTimer(0, 50, NULL);//50ms刷新一次
+	//SetTimer(0, 50, NULL);//50ms刷新一次
 
 	return TRUE;  // return TRUE unless you set the focus to a control
 	// 异常: OCX 属性页应返回 FALSE
@@ -84,7 +84,7 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 		CPacket* pPacket = (CPacket*)wParam;
 		if (pPacket != NULL) {
 			CPacket head = *(CPacket*)wParam;
-			delete (CPacket*)wParam;
+			//delete (CPacket*)wParam;
 			switch (head.sCmd) {
 			case 6:
 			{
@@ -143,8 +143,10 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 
 		}
 	}
-
-	return 0;
+	if (wParam != NULL) {
+		delete (CPacket*)wParam;
+	}
+	return 1;
 }
 
 void CWatchDialog::OnTimer(UINT_PTR nIDEvent)

@@ -102,12 +102,13 @@ void CClientController::threadWatchScreen()
 	ULONGLONG nTick = GetTickCount64();
 	while (!m_isClosed) {
 		if (m_watchDlg.isFull() == false) {
-			if (GetTickCount64() - nTick < 200) {
-				Sleep(200 - DWORD(GetTickCount64() - nTick));
+			if (GetTickCount64() - nTick < 30){
+				Sleep(30- DWORD(GetTickCount64() - nTick));
 			}
 			nTick = GetTickCount64();
 			int ret = SendCommandPacket(m_watchDlg.GetSafeHwnd(), 6, true, NULL, 0);
 			if (ret == 1) {
+				m_watchDlg.SetImageStatus(true);
 				//TRACE("成功发送请求图片命令\r\n");
 			}
 			else {
@@ -163,8 +164,6 @@ unsigned CClientController::threadEntry(void* arg)
 	return 0;
 }
 
-
-
 LRESULT CClientController::OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
 	return m_statusDlg.ShowWindow(SW_SHOW);
@@ -175,12 +174,3 @@ LRESULT CClientController::OnShowWatcher(UINT nMsg, WPARAM wParam, LPARAM lParam
 	return m_watchDlg.DoModal();
 }
 
-LRESULT CClientController::OnSendPacket(UINT nMsg, WPARAM wParam, LPARAM lParam)
-{
-	return 0;
-}
-
-LRESULT CClientController::OnSendData(UINT nMsg, WPARAM wParam, LPARAM lParam)
-{
-	return LRESULT();
-}

@@ -40,6 +40,7 @@ public:
 			if ((HBITMAP)image != NULL)
 				image.Destroy();
 			image.Load(pStream);
+			pStream->Release();
 		}
 		return hRet;
 	}
