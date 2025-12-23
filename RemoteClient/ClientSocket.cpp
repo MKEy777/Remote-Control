@@ -50,6 +50,28 @@ CClientSocket::CClientSocket()
 	}
 }
 
+CClientSocket::~CClientSocket()
+{
+	if (m_hThread != INVALID_HANDLE_VALUE) {
+		PostThreadMessage(m_nThreadID, WM_QUIT, 0, 0);
+		WaitForSingleObject(m_hThread, INFINITE);
+		CloseHandle(m_hThread);
+		m_hThread = INVALID_HANDLE_VALUE;
+	}
+
+	if (m_eventInvoke) {
+		CloseHandle(m_eventInvoke);
+		m_eventInvoke = NULL;
+	}
+
+	if (m_sock != INVALID_SOCKET) {
+		closesocket(m_sock);
+		m_sock = INVALID_SOCKET;
+	}
+
+	WSACleanup();
+}
+
 std::string GetErrInfo(int wsaErrcode) {
 	std::string ret;
 	LPVOID lpMsgBuf = NULL;
@@ -95,6 +117,30 @@ unsigned CClientSocket::threadEntry(void* arg)
 	thiz->threadFunc2();
 	_endthreadex(0);
 	return 0;
+}
+
+bool CClientSocket::InitSocket()
+{
+	if (m_sock != -1) CloseSocket();
+
+	m_sock = socket(PF_INET, SOCK_STREAM, 0);
+	if (m_sock == -1) return false;
+
+	sockaddr_in ser_adr;
+	memset(&ser_adr, 0, sizeof(ser_adr));
+	ser_adr.sin_family = AF_INET;
+	ser_adr.sin_addr.s_addr = m_nIP;
+	ser_adr.sin_port = htons(m_nPort);
+
+	int ret = connect(m_sock, (sockaddr*)&ser_adr, sizeof(ser_adr));
+	if (ret == -1) {
+		AfxMessageBox(_T("无法连接到服务器!"));
+		TRACE("无法连接到服务器!\n", WSAGetLastError, GetErrInfo(WSAGetLastError()).c_str());
+		return false;
+	}
+
+	m_index = 0;
+	return true;
 }
 
 int CClientSocket::DealCommand()

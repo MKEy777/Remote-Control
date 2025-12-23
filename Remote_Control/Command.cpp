@@ -247,12 +247,12 @@ int CCommand::SendScreen(std::list<CPacket>& lstPacket, CPacket& inPacket) {
         HICON hIcon = CopyIcon(ci.hCursor);
         if (hIcon) {
             ICONINFO ii;
-            // 获取光标的详细信息，主要是为了拿到热点（Hotspot）
+            // 获取光标的详细信息，主要是为了拿到热点
             if (GetIconInfo(hIcon, &ii)) {
                 // 计算光标左上角在原始屏幕上的坐标
                 int x = ci.ptScreenPos.x - ii.xHotspot;
                 int y = ci.ptScreenPos.y - ii.yHotspot;
-                // 如果屏幕被缩放了（比如宽大于1920的情况），光标坐标也要跟着缩放
+                // 如果屏幕被缩放了，光标坐标也要跟着缩放
                 if (nDestWidth != nWidth) {
                     x = x * nDestWidth / nWidth;
                     y = y * nDestHeight / nHeight;

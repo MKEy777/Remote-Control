@@ -33,8 +33,6 @@ void CWatchDialog::DoDataExchange(CDataExchange* pDX)
 
 
 BEGIN_MESSAGE_MAP(CWatchDialog, CDialog)
-	ON_WM_TIMER()
-	//ON_WM_SIZE()
 	ON_WM_LBUTTONDOWN()
 	ON_WM_LBUTTONUP()
 	ON_WM_RBUTTONDOWN()
@@ -149,45 +147,6 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 	return 1;
 }
 
-void CWatchDialog::OnTimer(UINT_PTR nIDEvent)
-{
-	// TODO: 在此添加消息处理程序代码和/或调用默认值
-	//if (nIDEvent == 0) {
-	//	if (m_isFull)
-	//	{
-	//		if (m_bFirstFrame)
-	//		{
-	//			int nToolBarHeight = 80;
-	//			int nWidth = m_image.GetWidth();
-	//			int nHeight = m_image.GetHeight();
-	//			CRect rectWindow(0, 0, nWidth, nHeight + nToolBarHeight);
-	//			CalcWindowRect(&rectWindow);
-	//			SetWindowPos(NULL, 0, 0, rectWindow.Width(), rectWindow.Height(), SWP_NOMOVE | SWP_NOZORDER);
-
-	//			// 调整 Picture Control 大小
-	//			if (m_picture.GetSafeHwnd()) {
-	//				m_picture.MoveWindow(0, nToolBarHeight, nWidth, nHeight);
-	//			}
-
-	//			CenterWindow();
-	//			m_bFirstFrame = false;
-	//		}
-	//		CClientDC dc(&m_picture);
-
-	//		CRect rect;
-	//		m_picture.GetClientRect(rect); // 获取控件客户区大小
-
-	//		// 将成员变量 m_image 绘制到控件上
-	//		m_image.StretchBlt(dc.GetSafeHdc(), 0, 0, rect.Width(), rect.Height(), SRCCOPY);
-
-	//		m_image.Destroy();
-
-	//		// 重置标志位
-	//		m_isFull = false;
-	//	}
-	//}
-	CDialog::OnTimer(nIDEvent);
-}
 
 //typedef struct MouseEvent {
 //	MouseEvent() {

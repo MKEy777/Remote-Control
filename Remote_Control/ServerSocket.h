@@ -45,7 +45,7 @@ public:
 			return 0;
 		}
 protected:
-	bool InitSocket(short port) {
+		bool InitSocket(short port) {
 		if (m_sock == -1) return false;
 
 		sockaddr_in serv_adr;
