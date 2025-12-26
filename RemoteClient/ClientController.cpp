@@ -7,10 +7,6 @@ std::map<UINT, CClientController::MSGFUNC> CClientController::m_mapFunc;
 CClientController* CClientController::m_instance = NULL;
 CClientController::CHelper CClientController::m_helper;
 
-// ========================================================================
-// 构造与析构
-// ========================================================================
-
 CClientController::CClientController()
     : m_statusDlg(&m_remoteDlg), m_watchDlg(&m_remoteDlg) // 关键：传入主窗口指针作为父窗口
 {
@@ -95,10 +91,7 @@ bool CClientController::SendCommandPacket(HWND hWnd, int nCmd, bool bAutoClose, 
     return ret;
 }
 
-// ========================================================================
 // 业务功能：文件下载
-// ========================================================================
-
 int CClientController::DownFile(CString strPath)
 {
     // 弹出文件保存对话框
@@ -132,17 +125,18 @@ int CClientController::DownFile(CString strPath)
     return 0;
 }
 
-void CClientController::DownloadEnd()
+void CClientController::DownloadEnd(bool downloadsuccess)
 {
-    m_statusDlg.ShowWindow(SW_HIDE);
-    m_remoteDlg.EndWaitCursor();
-    m_remoteDlg.MessageBox(_T("下载完成！！"), _T("完成"));
+	m_statusDlg.ShowWindow(SW_HIDE);
+	m_remoteDlg.EndWaitCursor();
+	if (!downloadsuccess) {
+		m_remoteDlg.MessageBox(_T("下载失败！！"), _T("失败"));
+		return;
+	}
+	m_remoteDlg.MessageBox(_T("下载完成！！"), _T("完成"));
 }
 
-// ========================================================================
 // 业务功能：屏幕监控
-// ========================================================================
-
 void CClientController::StartWatchScreen()
 {
     m_isClosed = false;
@@ -192,10 +186,7 @@ void CClientController::threadWatchScreen(void* arg)
     _endthread();
 }
 
-// ========================================================================
 // 后台消息分发线程
-// ========================================================================
-
 unsigned CClientController::threadEntry(void* arg)
 {
     CClientController* thiz = (CClientController*)arg;
@@ -237,10 +228,7 @@ void CClientController::threadFunc()
     }
 }
 
-// ========================================================================
 // 消息处理函数
-// ========================================================================
-
 LRESULT CClientController::OnShowStatus(UINT nMsg, WPARAM wParam, LPARAM lParam)
 {
     return m_statusDlg.ShowWindow(SW_SHOW);

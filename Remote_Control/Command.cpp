@@ -120,12 +120,12 @@ int CCommand::DownloadFile(std::list<CPacket>& lstPacket, CPacket& inPacket) {
     FILE* pFile = NULL;
 
     CString strLog;
-    strLog.Format(_T("[Debug] 尝试打开文件: %s\n"), CString(strPath.c_str()));
+    strLog.Format(_T("[Debug] 尝试打开文件: %s\n"), (LPCTSTR)CString(strPath.c_str()));
     OutputDebugString(strLog);
 
     errno_t err = fopen_s(&pFile, strPath.c_str(), "rb");
     if (err != 0) {
-        strLog.Format(_T("[Error] 打开文件失败! Error Code: %d, Path: %s\n"), err, CString(strPath.c_str()));
+        strLog.Format(_T("[Error] 打开文件失败! Error Code: %d, Path: %s\n"), err, (LPCTSTR)CString(strPath.c_str()));
         OutputDebugString(strLog);
         lstPacket.push_back(CPacket(4, (BYTE*)&data, 8));
     }

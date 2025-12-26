@@ -87,7 +87,7 @@ LRESULT CWatchDialog::OnSendPackAck(WPARAM wParam, LPARAM lParam)
 			case 6:
 			{
 				// 1. 将字节流转换为图片
-				Tool::Bytes2Image(m_image, head.strData);
+				CTool::Bytes2Image(m_image, head.strData);
 
 				// 2. 检查图片是否有效
 				if (m_image.IsNull() == false) {

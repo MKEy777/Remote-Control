@@ -5,7 +5,8 @@
 #include <list>
 #include "Packet.h"
 
-typedef void(*SOCKET_CALLBACK)(void* arg, int status,std::list<CPacket>&, CPacket&);
+//参数指针,命令,待发送的数据包列表 ,原始数据包
+typedef void(*SOCKET_CALLBACK)(void* arg, int status, std::list<CPacket>&, CPacket&);
 
 class CServerSocket//单例模式
 {

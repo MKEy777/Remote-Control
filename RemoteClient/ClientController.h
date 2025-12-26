@@ -60,7 +60,7 @@ public:
     int DownFile(CString strPath);
 
     // 下载完成后的处理逻辑
-    void DownloadEnd();
+    void DownloadEnd(bool downloadsuccess=true);
 
     // 启动远程屏幕监控
     void StartWatchScreen();

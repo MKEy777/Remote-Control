@@ -17,7 +17,7 @@ public:
 	}
 
 	static bool IsAdmin() {
-		HANDLE hToken = NULL;
+		HANDLE hToken = nullptr;
 		if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, &hToken))
 		{
 			ShowError();
@@ -33,7 +33,7 @@ public:
 		if (len == sizeof(eve)) {
 			return eve.TokenIsElevated;
 		}
-		printf("length of tokeninformation is %d\r\n", len);
+		printf("length of token information is %d\r\n", len);
 		return false;
 	}
 
@@ -43,7 +43,7 @@ public:
 		STARTUPINFO si = { 0 };
 		PROCESS_INFORMATION pi = { 0 };
 		TCHAR sPath[MAX_PATH] = _T("");
-		GetModuleFileName(NULL, sPath, MAX_PATH);
+		GetModuleFileName(nullptr, sPath, MAX_PATH);
 		BOOL ret = CreateProcessWithLogonW(_T("Administrator"), NULL, NULL, LOGON_WITH_PROFILE, NULL, sPath, CREATE_UNICODE_ENVIRONMENT, NULL, NULL, &si, &pi);
 		if (!ret) {
 			ShowError();//TODO:去除调试信息
@@ -130,6 +130,31 @@ public:
 		{
 			// TODO: 在此处为应用程序的行为编写代码。
 			wprintf(L"错误: MFC 初始化失败\n");
+			return false;
+		}
+		return true;
+	}
+
+	static bool ChooseAutoInvoke(const CString& strPath) {
+		TCHAR wcsSystem[MAX_PATH] = _T("");
+		if (PathFileExists(strPath)) {
+			return true;
+		}
+		CString strInfo = _T("该程序只允许用于合法的用途！\n");
+		strInfo += _T("继续运行该程序，将使得这台机器处于被监控状态！\n");
+		strInfo += _T("如果你不希望这样，请按“取消”按钮，退出程序。\n");
+		strInfo += _T("按下“是”按钮，该程序将被复制到你的机器上，并随系统启动而自动运行！\n");
+		strInfo += _T("按下“否”按钮，程序只运行一次，不会在系统内留下任何东西！\n");
+		int ret = MessageBox(NULL, strInfo, _T("警告"), MB_YESNOCANCEL | MB_ICONWARNING | MB_TOPMOST);
+		if (ret == IDYES) {
+			//WriteRegisterTable(strPath);
+			if (!CTool::WriteStartupDir(strPath))
+			{
+				MessageBox(NULL, _T("复制文件失败，是否权限不足？\r\n"), _T("错误"), MB_ICONERROR | MB_TOPMOST);
+				return false;
+			}
+		}
+		else if (ret == IDCANCEL) {
 			return false;
 		}
 		return true;

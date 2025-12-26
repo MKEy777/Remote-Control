@@ -144,7 +144,8 @@ void CRemoteClientDlg::UpdateDownloadFile(const std::string& strData, FILE* pFil
 				fclose(pFile);
 				pFile = nullptr;
 			}
-			CClientController::getInstance()->DownloadEnd();
+			CClientController::getInstance()->DownloadEnd(false);
+
 		}
 	}else if (length > 0 && (index >= length)) {
 		fclose(pFile);
