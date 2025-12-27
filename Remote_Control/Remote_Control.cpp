@@ -8,6 +8,7 @@
 #include "Tool.h"
 #include "Command.h"
 #include <conio.h>
+#include "Queue.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -123,45 +124,44 @@ unsigned __stdcall func(void* arg) {
 	}
 	return 0;
 }
-int main()
-{
-	_CrtSetDbgFlag(_CRTDBG_ALLOC_MEM_DF | _CRTDBG_LEAK_CHECK_DF);
 
-	if (!CTool::Init()) return 1;
+void test() {
+	printf("press any key to exit...\r\n");
 
-	HANDLE hIOCP = INVALID_HANDLE_VALUE;//IO完成端口句柄
-	printf("IOCP created: %p\r\n press any key to exit...\r\n", hIOCP);
-	
-	hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, NULL, 1);
-	HANDLE hThread =(HANDLE)_beginthread(threadQueueEntry, 0, hIOCP);
-	
+	CQueue<std::string> lstStrings;
+	ULONGLONG total = GetTickCount64();
 	ULONGLONG tick = GetTickCount64();
 	ULONGLONG tick0 = GetTickCount64();
-	while (!_kbhit()){
-		if (GetTickCount64()-tick0>1000)
+	while (GetTickCount64() - total < 1000) {
+		//if (GetTickCount64() - tick0 >20)
 		{
-			PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_DATA), (ULONG_PTR)new IOCP_DATA(IocpListPop, "hello world", func), NULL);
+			lstStrings.PushBack("hello world");
 			tick0 = GetTickCount64();
 		}
-		if (GetTickCount64() - tick >1500)
+	}
+	printf("exit begin,size %d\r\n", lstStrings.Size());
+	total = GetTickCount64();
+	while (GetTickCount64() - total < 1000) {
+		//if (GetTickCount64() - tick > 20)
 		{
-			PostQueuedCompletionStatus(hIOCP, sizeof(IOCP_DATA), (ULONG_PTR)new IOCP_DATA(IocpListPush, "hello world"), NULL);
+			std::string str;
+			lstStrings.PopFront(str);
 			tick = GetTickCount64();
 		}
-		Sleep(1);
 	}
-	if (hIOCP != nullptr) {
-		PostQueuedCompletionStatus(hIOCP, 0, NULL, NULL);//通知线程退出
-		WaitForSingleObject(hThread, INFINITE);//等待线程退出
+	printf("exit done,size %d\r\n", lstStrings.Size());
+	lstStrings.Clear();
 
+}
+int main()
+{
+	if (!CTool::Init()) return 1;
+	for (int i = 0; i < 10; ++i) {
+		test();
 	}
-	CloseHandle(hIOCP);
-	printf("IOCP closed\r\n");
-	::exit(0);
-	
-
-
-	//CCommand cmd;
+	return 0;
+}
+//CCommand cmd;
 	////全局静态变量初始化
 	//CServerSocket* pserver = CServerSocket::GetInstance();
 	//int ret = pserver->Run(CCommand::RunCommand, &cmd);
@@ -178,5 +178,3 @@ int main()
 	//default:
 	//	break;
 	//}
-	return 0;
-}
