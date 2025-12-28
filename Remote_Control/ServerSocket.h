@@ -188,7 +188,7 @@ protected:
 		}
 		bool InitSockEnv() {
 			WSADATA data;
-			if (WSAStartup(MAKEWORD(1, 1), &data) != 0) {
+			if (WSAStartup(MAKEWORD(2, 0), &data) != 0) {
 				return FALSE;
 			}
 			return TRUE;

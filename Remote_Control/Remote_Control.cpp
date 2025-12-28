@@ -9,6 +9,7 @@
 #include "Command.h"
 #include <conio.h>
 #include "Queue.h"
+#include <MSWSock.h>
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -59,107 +60,72 @@ using namespace std;
 //	return 0;
 //}
 
-
-
-#define IOCP_LIST_EMPTY 0
-#define IOCP_LIST_PUSH  1
-#define IOCP_LIST_POP   2
-enum {
-	IocpListEmpty,
-	IocpListPush,
-	IocpListPop
-};
-struct IOCP_DATA {
-	int nOperator;
-	std::string strData;
-	_beginthreadex_proc_type callback;
-
-	IOCP_DATA() :nOperator(-1){}
-	IOCP_DATA(int op, const std::string data, _beginthreadex_proc_type cb=nullptr) :nOperator(op), strData(data), callback(cb) {}
-};
-void threadmain(HANDLE hIOCP) {
-	std::list<std::string> lstString;
-	DWORD dwTransferred = 0;
-	ULONG_PTR CompletionKey = 0;
-	OVERLAPPED* Overlapped = nullptr;
-	while (GetQueuedCompletionStatus(hIOCP, &dwTransferred, &CompletionKey, &Overlapped, INFINITE)) {
-		if (dwTransferred == 0 && CompletionKey == NULL && Overlapped == nullptr) {
-			printf("IOCP thread exit\r\n");
-			break;
-		}
-		IOCP_DATA* pParam = (IOCP_DATA*)CompletionKey;
-		if (pParam->nOperator == IocpListPush) {
-			lstString.push_back(pParam->strData);
-		}
-		else if (pParam->nOperator == IocpListPop) {
-			std::string* pStr = nullptr;
-			if (!lstString.empty()) {
-				pStr = new std::string(lstString.front());
-				lstString.pop_front();
-			}
-			if (pParam->callback) {
-				pParam->callback(pStr);
-			}
-		}
-		else if (pParam->nOperator == IocpListEmpty) {
-			lstString.clear();
-		}
-		delete pParam;
+class COverlapped {
+public:
+	OVERLAPPED m_overlapped;
+	DWORD m_operator;
+	char m_buffer[4096];
+	COverlapped() {
+		m_operator = 0;
+		memset(&m_overlapped, 0, sizeof(m_overlapped));
+		memset(m_buffer, 0, sizeof(m_buffer));
 	}
-	lstString.clear();
-}
-void threadQueueEntry(HANDLE hIOCP)
+};
+
+void IOCP()
 {
-	threadmain(hIOCP);
-	_endthread();
-}
-unsigned __stdcall func(void* arg) {
-	std::string* pstr = (std::string*)arg;
-	if (pstr != NULL) {
-		printf("pop from list: %s\r\n", pstr->c_str());
-		delete pstr;
+	SOCKET sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	if (sock == INVALID_SOCKET)
+	{
+		CTool::ShowError();
+		return;
 	}
-	else {
-		printf("pop from list: null\r\n");
-	}
-	return 0;
-}
+	HANDLE hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, sock, 4);
+	SOCKET client = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
+	CreateIoCompletionPort((HANDLE)sock, hIOCP, 0, 0);
+	sockaddr_in addr;
+	addr.sin_family = AF_INET;
+	addr.sin_addr.s_addr = INADDR_ANY;
+	addr.sin_port = htons(9527);
+	if (bind(sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) return;
+	if (listen(sock, 5) == SOCKET_ERROR) return;
 
-void test() {
-	printf("press any key to exit...\r\n");
-
-	CQueue<std::string> lstStrings;
-	ULONGLONG total = GetTickCount64();
-	ULONGLONG tick = GetTickCount64();
-	ULONGLONG tick0 = GetTickCount64();
-	while (GetTickCount64() - total < 1000) {
-		//if (GetTickCount64() - tick0 >20)
-		{
-			lstStrings.PushBack("hello world");
-			tick0 = GetTickCount64();
+	COverlapped overlapped;
+	overlapped.m_operator = 1;//accept
+	memset(&overlapped.m_overlapped, 0, sizeof(OVERLAPPED));
+	DWORD receved = 0;
+	if (AcceptEx(sock, client, overlapped.m_buffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &receved, &overlapped.m_overlapped) == FALSE) {
+		int err = WSAGetLastError();
+		if (err != ERROR_IO_PENDING) {
+			CTool::ShowError();
+			return;
 		}
 	}
-	printf("exit begin,size %d\r\n", lstStrings.Size());
-	total = GetTickCount64();
-	while (GetTickCount64() - total < 1000) {
-		//if (GetTickCount64() - tick > 20)
-		{
-			std::string str;
-			lstStrings.PopFront(str);
-			tick = GetTickCount64();
+
+	overlapped.m_operator = 2;//send
+	//WSASend();
+	overlapped.m_operator = 3;//recv
+	//WSARecv();
+	//开启线程处理IOCP
+	while (true) {//代表一个线程
+		DWORD transferred = 0;
+		ULONG_PTR Key = 0;
+		LPOVERLAPPED pOverlapped = NULL;
+		if (GetQueuedCompletionStatus(hIOCP, &transferred, &Key, &pOverlapped, INFINITE)) {
+			COverlapped* pO = CONTAINING_RECORD(pOverlapped, COverlapped, m_overlapped);
+			switch (pO->m_operator) {
+			case 1://accept
+			{
+			}
+			}
 		}
 	}
-	printf("exit done,size %d\r\n", lstStrings.Size());
-	lstStrings.Clear();
-
 }
+
 int main()
 {
 	if (!CTool::Init()) return 1;
-	for (int i = 0; i < 10; ++i) {
-		test();
-	}
-	return 0;
+	IOCP();
 }
 //CCommand cmd;
 	////全局静态变量初始化
