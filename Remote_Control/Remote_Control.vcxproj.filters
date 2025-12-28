@@ -51,6 +51,9 @@
     <ClInclude Include="Thread.h">
       <Filter>头文件</Filter>
     </ClInclude>
+    <ClInclude Include="Sever.h">
+      <Filter>头文件</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="Remote_Control.cpp">

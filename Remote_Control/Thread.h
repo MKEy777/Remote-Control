@@ -7,22 +7,28 @@
 #include <thread>
 #include <Windows.h>
 
-
+// 线程函数基类
 class ThreadFuncBase {};
+
+// 成员函数指针类型定义
+// - 返回值 int 用于控制 worker 生命周期（<0 释放线程，>=0 继续占用）
 typedef int (ThreadFuncBase::* FUNCTYPE)();
 class ThreadWorker {
 public:
     ThreadWorker() : thiz(NULL), func(NULL) {}
 
+    // 带参构造函数
     ThreadWorker(void* obj, FUNCTYPE f)
         : thiz((ThreadFuncBase*)obj), func(f) {
     }
 
+    // 拷贝构造函数
     ThreadWorker(const ThreadWorker& worker) {
         thiz = worker.thiz;
         func = worker.func;
     }
 
+    // 拷贝赋值运算符
     ThreadWorker& operator=(const ThreadWorker& worker) {
         if (this != &worker) {
             thiz = worker.thiz;
@@ -31,6 +37,7 @@ public:
         return *this;
     }
 
+    // 函数调用运算符
     int operator()() {
         if (IsValid()) {
             return (thiz->*func)();
@@ -38,13 +45,14 @@ public:
         return -1;
     }
 
+    // 判断 worker 是否有效
     bool IsValid() const {
         return (thiz != NULL) && (func != NULL);
     }
 
 private:
-    ThreadFuncBase* thiz;
-    FUNCTYPE func;
+    ThreadFuncBase* thiz; // 指向具体业务对象的指针
+    FUNCTYPE func;        // 成员函数指针
 };
 
 class CThread {
@@ -95,13 +103,12 @@ public:
         return true;
     }
 
-    // - worker 无效 => 清空 worker
-    // - worker 有效 => 设置 worker
+    //worker 有效 => 设置 worker， worker 无效 => 清空 worker
     void UpdateWorker(const ::ThreadWorker& worker = ::ThreadWorker()) {
         std::lock_guard<std::mutex> lk(m_workerLock);
 
         if (!worker.IsValid()) {
-            m_worker.reset();//// release resource and convert to empty shared_ptr object
+            m_worker.reset();// release resource and convert to empty shared_ptr object
         }
         else {
             m_worker = std::make_shared<::ThreadWorker>(worker);
@@ -128,7 +135,6 @@ private:
             // 1) 等待：直到出现有效 worker 或线程被停止
             {
                 std::unique_lock<std::mutex> lk(m_workerLock);
-
                 m_cv.wait(lk, [&]() {
                     // 被 Stop() 或 有 worker 才醒
 					if (!m_bStatus.load()) return true;// Stop 请求退出
@@ -138,15 +144,12 @@ private:
                 if (!m_bStatus.load()) {
                     break; // Stop 请求退出
                 }
-
                 // 拷贝 shared_ptr 到局部，避免执行时持锁
                 localWorker = m_worker;
             }
-
             // 2) 执行任务
             if (localWorker && localWorker->IsValid()) {
                 int ret = (*localWorker)();
-
                 // ret < 0 才清 worker，ret==0 则持续占用，线程认为自己在忙
                 if (ret < 0) {
                     std::lock_guard<std::mutex> lk(m_workerLock);
@@ -219,8 +222,7 @@ public:
         }
     }
 
-    // 返回 -1 表示分配失败，所有线程都在忙
-    // >=0 表示第 n 个线程分配来做这个事情
+    //-1表示分配失败，所有线程都在忙; >=0 表示第n个线程被分配
     int DispatchWorker(const ThreadWorker& worker) {
         int index = -1;
         m_lock.lock();

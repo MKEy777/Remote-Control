@@ -146,6 +146,7 @@
     <ClInclude Include="Remote_Control.h" />
     <ClInclude Include="Resource.h" />
     <ClInclude Include="ServerSocket.h" />
+    <ClInclude Include="Sever.h" />
     <ClInclude Include="targetver.h" />
     <ClInclude Include="Thread.h" />
     <ClInclude Include="Tool.h" />
