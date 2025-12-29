@@ -174,7 +174,7 @@ protected:
 		CServerSocket(const CServerSocket& ss) {};
 		CServerSocket() {
 			if (InitSockEnv() == FALSE) {
-				MessageBoxW(NULL, _T("Socket环境初始化失败!"), _T("初始化错误"), MB_OK | MB_ICONERROR);
+				MessageBox(NULL, _T("Socket环境初始化失败!"), _T("初始化错误"), MB_OK | MB_ICONERROR);
 				exit(0);
 			}
 			m_sock = socket(PF_INET, SOCK_STREAM, 0); // 创建套接字；(地址族，套接字类型，协议)

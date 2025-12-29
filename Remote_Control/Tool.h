@@ -40,14 +40,14 @@ public:
 	static bool RunAsAdmin()
 	{//TODO:获取管理员权限、使用该权限创建进程
 		//本地策略组 开启Administrator账户  禁止空密码只能登录本地控制台
-		STARTUPINFO si = { 0 };
+		STARTUPINFOW si = { 0 };
 		PROCESS_INFORMATION pi = { 0 };
-		TCHAR sPath[MAX_PATH] = _T("");
-		GetModuleFileName(nullptr, sPath, MAX_PATH);
-		BOOL ret = CreateProcessWithLogonW(_T("Administrator"), NULL, NULL, LOGON_WITH_PROFILE, NULL, sPath, CREATE_UNICODE_ENVIRONMENT, NULL, NULL, &si, &pi);
+		WCHAR sPath[MAX_PATH] = L"";
+		GetModuleFileNameW (nullptr, sPath, MAX_PATH);
+		BOOL ret = CreateProcessWithLogonW(L"Administrator", NULL, NULL, LOGON_WITH_PROFILE, NULL, sPath, CREATE_UNICODE_ENVIRONMENT, NULL, NULL, &si, &pi);
 		if (!ret) {
 			ShowError();//TODO:去除调试信息
-			MessageBox(NULL, sPath, _T("创建进程失败"), 0);//TODO:去除调试信息
+			MessageBoxW(NULL, sPath, L"创建进程失败", 0);//TODO:去除调试信息
 			return false;
 		}
 		WaitForSingleObject(pi.hProcess, INFINITE);
@@ -58,14 +58,13 @@ public:
 	static void ShowError()
 	{
 		LPWSTR lpMessageBuf = NULL;
-		//strerror(errno);//标准C语音库
-		FormatMessage(
+		FormatMessageW(
 			FORMAT_MESSAGE_FROM_SYSTEM | FORMAT_MESSAGE_ALLOCATE_BUFFER,
 			NULL, GetLastError(),
 			MAKELANGID(LANG_NEUTRAL, SUBLANG_DEFAULT),
 			(LPWSTR)&lpMessageBuf, 0, NULL);
-		OutputDebugString(lpMessageBuf);
-		MessageBox(NULL, lpMessageBuf, _T("发生错误"), 0);
+		OutputDebugStringW(lpMessageBuf);
+		MessageBoxW(NULL, lpMessageBuf, L"发生错误", 0);
 		LocalFree(lpMessageBuf);
 	}
 	/**
