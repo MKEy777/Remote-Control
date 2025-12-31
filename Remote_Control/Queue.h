@@ -2,6 +2,8 @@
 #include "pch.h"
 #include <atomic>
 #include <list>
+#include "Thread.h"
+#pragma warning(disable:4407)
 
 template<class T>
 class CQueue
@@ -9,11 +11,11 @@ class CQueue
 public:
 	typedef struct IocpParam {
 		size_t nOperator;//操作
-		T strData;//数据
+		T Data;//数据
 		HANDLE hEvent;//pop时使用，用于通知调用线程
 
 		IocpParam() :nOperator(-1) {}
-		IocpParam(size_t op, const T& data, HANDLE hEve=NULL) :nOperator(op), strData(data), hEvent(hEve) {}
+		IocpParam(size_t op, const T& data, HANDLE hEve=NULL) :nOperator(op), Data(data), hEvent(hEve) {}
 	}PPARAM;//IOCP参数结构体
 	enum {
 		QNone,
@@ -31,7 +33,7 @@ public:
 			m_hThread = (HANDLE)_beginthread(&CQueue<T>::threadEntry, 0, this);
 	}
 
-	~CQueue() {
+	virtual ~CQueue() {
 		m_lock = true;
 		PostQueuedCompletionStatus(m_hCompeletionPort, 0, NULL, NULL);
 		WaitForSingleObject(m_hThread, INFINITE);
@@ -51,7 +53,7 @@ public:
 			return ret;
 		}
 
-		bool PopFront(T& data) {
+		virtual bool PopFront(T& data) {
 			if (m_lock) return false;
 			HANDLE hEvent = CreateEvent(NULL, TRUE, FALSE, NULL);
 			if (hEvent == NULL) {
@@ -65,7 +67,7 @@ public:
 			}
 			ret = WaitForSingleObject(hEvent, INFINITE) == WAIT_OBJECT_0;
 			CloseHandle(hEvent);
-			if (ret) data = Param.strData;
+			if (ret) data = Param.Data;
 			return ret;
 		}
 
@@ -96,16 +98,16 @@ public:
 			if (!ret) delete pParam;
 			return ret;
 		}
-	private:
-		void DealParam(PPARAM* pParam) {
+protected:
+		virtual void DealParam(PPARAM* pParam) {
 			switch (pParam->nOperator) {
 			case QPush:
-				m_lstData.push_back(pParam->strData);
+				m_lstData.push_back(pParam->Data);
 				delete pParam;
 				break;
 			case QPop:
 				if (!m_lstData.empty()) {
-					pParam->strData = m_lstData.front();
+					pParam->Data = m_lstData.front();
 					m_lstData.pop_front();
 				}
 				if (pParam->hEvent)
@@ -130,7 +132,7 @@ public:
 			thiz->threadmain();
 			_endthread();
 		}
-		void threadmain() {
+		virtual void threadmain() {
 			PPARAM* pParam = nullptr;
 			DWORD dwBytesTransferred = 0;
 			ULONG_PTR CompletionKey = 0;
@@ -155,9 +157,88 @@ public:
 				DealParam(pParam);
 			}
 		}
-
+protected:
 		std::list<T> m_lstData;
 		HANDLE m_hCompeletionPort;
 		HANDLE m_hThread;
 		std::atomic<bool> m_lock;
 	};
+
+	template<class Obj,class T>
+	class CSendQueue :public CQueue<T>, public ThreadFuncBase
+	{
+	public:
+		using Callback = int (Obj::*)(T& data);
+
+		CSendQueue(Obj* obj, Callback callback)
+			:CQueue<T>(), m_base(obj), m_callback(callback)
+		{
+			m_thread.Start();
+			m_thread.UpdateWorker(::ThreadWorker(this, (FUNCTYPE)&CSendQueue<Obj, T>::threadTick));
+		}
+		virtual ~CSendQueue() {
+			m_base = nullptr;
+			m_callback = nullptr;
+		}
+	protected:
+		virtual bool PopFront(T& data) {
+			return false;
+		}
+		bool PopFront() {
+			typename CQueue<T>::IocpParam* Param = new typename CQueue<T>::IocpParam(CQueue<T>::QPop, T());
+			if (CQueue<T>::m_lock) {
+				delete Param;
+				return false;
+			}
+			bool ret = PostQueuedCompletionStatus(CQueue<T>::m_hCompeletionPort, sizeof(typename CQueue<T>::PPARAM), (ULONG_PTR)&Param, NULL);
+			if (ret == false) {
+				delete Param;
+				return false;
+			}
+			return ret;
+		}
+		int threadTick() {
+			if (CQueue<T>::m_lstData.size() > 0) {
+				PopFront();
+			}
+			Sleep(1);
+			return 0;
+		}
+		virtual void DealParam(typename CQueue<T>::PPARAM* pParam) {
+			switch (pParam->nOperator)
+			{
+			case CQueue<T>::QPush:
+				CQueue<T>::m_lstData.push_back(pParam->Data);
+				delete pParam;
+				//printf("delete %08p\r\n", (void*)pParam);
+				break;
+			case CQueue<T>::QPop:
+				if (CQueue<T>::m_lstData.size() > 0) {
+					pParam->Data = CQueue<T>::m_lstData.front();
+					if ((m_base->*m_callback)(pParam->Data) == 0)
+						CQueue<T>::m_lstData.pop_front();
+				}
+				delete pParam;
+				break;
+			case CQueue<T>::QSize:
+				pParam->nOperator = CQueue<T>::m_lstData.size();
+				if (pParam->hEvent != NULL)
+					SetEvent(pParam->hEvent);
+				break;
+			case CQueue<T>::QClear:
+				CQueue<T>::m_lstData.clear();
+				delete pParam;
+				//printf("delete %08p\r\n", (void*)pParam);
+				break;
+			default:
+				OutputDebugStringA("unknown operator!\r\n");
+				break;
+			}
+		}
+	private:
+		Obj* m_base;
+		Callback m_callback;
+		CThread m_thread;
+	};
+
+	

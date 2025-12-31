@@ -20,7 +20,7 @@
 //#pragma comment(linker, "/subsystem:console /entry:mainCRTStartup")
 //#pragma comment(linker, "/subsystem:console /entry:WinMainCRTStartup")
 
-#define INVOKE_PATH _T("C:\\Users\\edoyun\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\RemoteCtrl.exe")
+#define INVOKE_PATH _T("C:\\Users\\C\\AppData\\Roaming\\Microsoft\\Windows\\Start Menu\\Programs\\Startup\\RemoteCtrl.exe")
 
 CWinApp theApp;
 

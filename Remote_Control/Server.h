@@ -79,7 +79,7 @@ private:
 	sockaddr_in m_laddr;
 	sockaddr_in m_raddr;
 	bool m_isbusy;
-	//CSendQueue<std::vector<char>> m_vecSend;//发送数据队列
+	CSendQueue<CClient, std::vector<char>> m_vecSend;//发送数据队列
 };
 
 template<IOCPOperator op>
@@ -101,6 +101,7 @@ public:
 	}
 };
 
+using SENDCALLBACK = CSendQueue<CClient, std::vector<char>>::Callback;
 template<IOCPOperator>
 class SendOverlapped : public COverlapped{
 public:

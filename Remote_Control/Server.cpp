@@ -31,7 +31,7 @@ int AcceptOverlapped<op>::AcceptWorker()
 		int ret = WSARecv((SOCKET)*m_client, 
 			m_client->RecvWSABuffer(), 
 			1, 
-			*m_client, 
+			(LPDWORD)*m_client,
 			&m_client->flags(), 
 			m_client->RecvOverlapped(), NULL);
 		if (ret == SOCKET_ERROR && (WSAGetLastError() != WSA_IO_PENDING)) {
@@ -103,8 +103,8 @@ bool CServer::StartService()
 	CreateIoCompletionPort((HANDLE)m_sock, m_hIOCP, (ULONG_PTR)this, 0);
 	m_pool.Invoke();
 	m_pool.DispatchWorker(ThreadWorker(this, (FUNCTYPE)&CServer::threadIocp));
-	CClient* pClient = new CClient();
-	m_client.insert(std::make_pair(*pClient, pClient));
+	//CClient* pClient = new CClient();
+	//m_client.insert(std::make_pair(*pClient, pClient));
 	if (!NewAccept())return false;
 	return true;
 }
@@ -154,45 +154,35 @@ int CServer::threadIocp()
 	ULONG_PTR CompletionKey = 0;
 	OVERLAPPED* lpOverlapped = NULL;
 	if (GetQueuedCompletionStatus(m_hIOCP, &transferred, &CompletionKey, &lpOverlapped, INFINITE)) {
-		if (transferred > 0 && CompletionKey != 0) {
+		if (CompletionKey != 0) {
+			//把系统返回的 OVERLAPPED* 指针转换回 COverlapped* 指针的 m_overlapped对象
 			COverlapped* pOverlapped = CONTAINING_RECORD(lpOverlapped, COverlapped, m_overlapped);
+			pOverlapped->m_server = this;
+			TRACE("Operator is %d\r\n", pOverlapped->m_operator);
 			switch (pOverlapped->m_operator) {
-			case Accept: {
-				ACCEPTOVERLAPPED* pAccept = (ACCEPTOVERLAPPED*)pOverlapped;
-				m_pool.DispatchWorker(pAccept->m_worker);
+			case Accept:
+			{
+				ACCEPTOVERLAPPED* pOver = (ACCEPTOVERLAPPED*)pOverlapped;
+				TRACE("pOver %08X\r\n", pOver);
+				m_pool.DispatchWorker(pOver->m_worker);
 			}
-					   break;
-			case Recv: {
-				RECVOVERLAPPED* pRecv = (RECVOVERLAPPED*)pOverlapped;
-				if (pRecv->m_client != NULL) {
-					// 处理接收的数据
-					pRecv->m_buffer.resize(transferred);
-					// 这里可以处理接收到的数据
-
-					// 重新投递接收操作
-					pRecv->m_buffer.resize(1024 * 256);
-					m_pool.DispatchWorker(pRecv->m_worker);
-				}
+			break;
+			case Recv:
+			{
+				RECVOVERLAPPED* pOver = (RECVOVERLAPPED*)pOverlapped;
+				m_pool.DispatchWorker(pOver->m_worker);
 			}
-					 break;
-			case Send: {
-				SENDOVERLAPPED* pSend = (SENDOVERLAPPED*)pOverlapped;
-				m_pool.DispatchWorker(pSend->m_worker);
+			break;
+			case Send:
+			{
+				SENDOVERLAPPED* pOver = (SENDOVERLAPPED*)pOverlapped;
+				m_pool.DispatchWorker(pOver->m_worker);
 			}
-					 break;
+			break;
 			case Error:
 			{
-				ERROROVERLAPPED* pError = (ERROROVERLAPPED*)pOverlapped;
-				if (pError->m_client != NULL) {
-					// 处理错误，清理客户端连接
-					std::map<SOCKET, CClient*>::iterator it = m_client.find(
-						reinterpret_cast<SOCKET>(pError->m_client)
-					);
-					if (it != m_client.end()) {
-						delete it->second;
-						m_client.erase(it);
-					}
-				}
+				ERROROVERLAPPED* pOver = (ERROROVERLAPPED*)pOverlapped;
+				m_pool.DispatchWorker(pOver->m_worker);
 			}
 			break;
 			}
@@ -204,11 +194,11 @@ int CServer::threadIocp()
 	return 0;
 }
 
-CClient::CClient() :m_isbusy(false), m_flags(0),
+CClient::CClient() :m_isbusy(false), m_flags(0),m_used(0),
 m_overlapped(new ACCEPTOVERLAPPED()),
 m_recv(new RECVOVERLAPPED()),
-m_send(new SENDOVERLAPPED())
-//,m_vecSend(this, (SENDCALLBACK)&EdoyunClient::SendData)
+m_send(new SENDOVERLAPPED()),
+m_vecSend(this, (SENDCALLBACK)&CClient::SendData)
 {
 	TRACE("m_overlapped %08X\r\n", &m_overlapped);
 	m_sock = WSASocket(PF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
@@ -267,22 +257,22 @@ int CClient::Recv()
 
 int CClient::Send(void* buffer, size_t nSize)
 {
-	/*std::vector<char> data(nSize);
+	std::vector<char> data(nSize);
 	memcpy(data.data(), buffer, nSize);
 	if (m_vecSend.PushBack(data)) {
 		return 0;
 	}
-	return -1;*/
+	return -1;
 }
 
 int CClient::SendData(std::vector<char>& data)
 {
-	/*if (m_vecSend.Size() > 0) {
+	if (m_vecSend.Size() > 0) {
 		int ret = WSASend(m_sock, SendWSABuffer(), 1, &m_received, m_flags, &m_send->m_overlapped, NULL);
 		if (ret != 0 && WSAGetLastError() != WSA_IO_PENDING) {
 			CTool::ShowError();
 			return ret;
 		}
 	}
-	return 0;*/
+	return 0;
 }
