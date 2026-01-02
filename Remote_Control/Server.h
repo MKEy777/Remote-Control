@@ -44,6 +44,16 @@ public:
 	CClient();
 	~CClient();
 
+	void AddRef() {
+		m_refCount++;
+	}
+	void Release() {
+		// fetch_sub 返回修改前的值。如果返回 1，说明减完变成了 0
+		if (m_refCount.fetch_sub(1) == 1) {
+			delete this;
+		}
+	}
+
 	operator SOCKET() {
 		return m_sock;
 	}
@@ -68,6 +78,7 @@ public:
 	int SendData(std::vector<char>& data);
 
 private:
+	std::atomic<int> m_refCount;
 	SOCKET m_sock;
 	DWORD m_received;
 	DWORD m_flags;
@@ -97,14 +108,24 @@ public:
 	virtual ~RecvOverlapped() {}
 	int RecvWorker() {
 		int ret = m_client->Recv();
-		if (ret >= 0) {
-			DWORD flags = 0;
-			DWORD recvBytes = 0;
-			// 重置为 0 字节
-			m_wsabuffer.len = 0;
-			// 再次投递
-			WSARecv((SOCKET)*m_client, &m_wsabuffer, 1, &recvBytes, &flags, &m_overlapped, NULL);
+		if (ret < 0) {
+			m_server->CloseClient(m_client);
+			m_client->Release();
+			return -1;
 		}
+		m_client->AddRef();
+
+		DWORD flags = 0;
+		DWORD recvBytes = 0;
+		m_wsabuffer.len = 0;
+		int res = WSARecv((SOCKET)*m_client, &m_wsabuffer, 1, &recvBytes, &flags, &m_overlapped, NULL);
+		if (res == SOCKET_ERROR && WSAGetLastError() != WSA_IO_PENDING) {
+			m_client->Release();
+			m_server->CloseClient(m_client);
+			m_client->Release();
+			return -1; 
+		}
+		m_client->Release();
 		return ret;
 	}
 };
@@ -144,6 +165,8 @@ public:
 	//创建一个新 CClient，投递 AcceptEx 等待新连接
 	bool NewAccept();
 	void BindNewSocket(SOCKET s, ULONG_PTR nKey);
+	void CloseClient(CClient* client);
+	SOCKET GetListenSocket() const { return m_sock; }
 private:
 	void CreateSocket();
 	//IOCP 线程主循环：GetQueuedCompletionStatus 取完成事件并分发
@@ -153,6 +176,7 @@ private:
 	HANDLE m_hIOCP;
 	SOCKET m_sock;
 	sockaddr_in m_addr;
+	std::mutex m_clientLock;
 	std::map<SOCKET, CClient*> m_client;
 };
 

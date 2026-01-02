@@ -19,6 +19,8 @@ int AcceptOverlapped<op>::AcceptWorker()
 	TRACE("AcceptWorker this %08X\r\n", this);
 	INT lLength = 0, rLength = 0;
 	if (m_client->GetBufferSize() > 0) {
+		setsockopt((SOCKET)*m_client, SOL_SOCKET, SO_UPDATE_ACCEPT_CONTEXT,
+			(char*)&(m_server->GetListenSocket()), sizeof(SOCKET));
 		LPSOCKADDR pLocalAddr, pRemoteAddr;
 		GetAcceptExSockaddrs(*m_client, 0,
 			sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16,
@@ -28,6 +30,7 @@ int AcceptOverlapped<op>::AcceptWorker()
 		memcpy(m_client->GetLocalAddr(), pLocalAddr, sizeof(sockaddr_in));
 		memcpy(m_client->GetRemoteAddr(), pRemoteAddr, sizeof(sockaddr_in));
 		m_server->BindNewSocket(*m_client, (ULONG_PTR)m_client);
+		m_client->AddRef();
 		int ret = WSARecv((SOCKET)*m_client, 
 			m_client->RecvWSABuffer(), 
 			1, 
@@ -37,12 +40,16 @@ int AcceptOverlapped<op>::AcceptWorker()
 		if (ret == SOCKET_ERROR && (WSAGetLastError() != WSA_IO_PENDING)) {
 			//TODO:报错
 			TRACE("WSARecv failed %d\r\n", ret);
+			m_client->Release();
+			m_server->CloseClient(m_client);
 		}
 		if (!m_server->NewAccept())
 		{
+			m_client->Release();
 			return -2;
 		}
 	}
+	m_client->Release();
 	return -1;//必须返回-1，否则循环不会终止		
 }
 
@@ -115,7 +122,16 @@ bool CServer::NewAccept()
 {
 	CClient* pClient = new CClient();
 	pClient->SetOverlapped(pClient);
-	m_client.insert(std::pair<SOCKET, CClient*>(*pClient, pClient));
+	std::pair<std::map<SOCKET, CClient*>::iterator, bool> ret;
+	{
+		std::lock_guard<std::mutex> lock(m_clientLock);
+		ret = m_client.insert(std::pair<SOCKET, CClient*>(*pClient, pClient));
+	}
+	if (!ret.second) {
+		pClient->Release();
+		return false;
+	}
+	pClient->AddRef();
 	if (!AcceptEx(m_sock,
 		*pClient,
 		*pClient,
@@ -128,6 +144,12 @@ bool CServer::NewAccept()
 			closesocket(m_sock);
 			m_sock = INVALID_SOCKET;
 			m_hIOCP = INVALID_HANDLE_VALUE;
+			pClient->Release();
+			{
+				std::lock_guard<std::mutex> lock(m_clientLock);
+				m_client.erase(ret.first);
+			}
+			pClient->Release();
 			return false;
 		}
 	}
@@ -137,6 +159,29 @@ bool CServer::NewAccept()
 void CServer::BindNewSocket(SOCKET s, ULONG_PTR nKey)
 {
 	CreateIoCompletionPort((HANDLE)s, m_hIOCP, nKey, 0);
+}
+
+void CServer::CloseClient(CClient* client)
+{
+	if (!client) return;
+
+	SOCKET s = (SOCKET)(*client);
+	bool erased = false;
+	{
+		std::lock_guard<std::mutex> lk(m_clientLock);
+		auto it = m_client.find(s);
+		if (it != m_client.end()) {
+			m_client.erase(it);
+			erased = true;
+		}
+	}
+	if (erased) {
+		// 1. 强制关闭 Socket，触发 Worker 里的 IO 失败/返回
+		closesocket(s);
+		TRACE("CloseClient: Socket %d closed.\n", (int)s);
+		// 2. 释放 Map 持有的那个引用
+		client->Release();
+	}
 }
 
 void CServer::CreateSocket()
@@ -196,7 +241,7 @@ int CServer::threadIocp()
 	return 0;
 }
 
-CClient::CClient() :m_isbusy(false), m_flags(0),m_used(0),
+CClient::CClient() :m_refCount(1), m_isbusy(false), m_flags(0),m_used(0),
 m_overlapped(new ACCEPTOVERLAPPED()),
 m_recv(new RECVOVERLAPPED()),
 m_send(new SENDOVERLAPPED()),
