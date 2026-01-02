@@ -10,6 +10,7 @@
 #include <conio.h>
 #include "Queue.h"
 #include <MSWSock.h>
+#include "Server.h"
 
 #ifdef _DEBUG
 #define new DEBUG_NEW
@@ -60,66 +61,25 @@ using namespace std;
 //	return 0;
 //}
 
-class COverlapped {
-public:
-	OVERLAPPED m_overlapped;
-	DWORD m_operator;
-	char m_buffer[4096];
-	COverlapped() {
-		m_operator = 0;
-		memset(&m_overlapped, 0, sizeof(m_overlapped));
-		memset(m_buffer, 0, sizeof(m_buffer));
-	}
-};
+
+//class COverlapped {
+//public:
+//	OVERLAPPED m_overlapped;
+//	DWORD m_operator;
+//	char m_buffer[4096];
+//	COverlapped() {
+//		m_operator = 0;
+//		memset(&m_overlapped, 0, sizeof(m_overlapped));
+//		memset(m_buffer, 0, sizeof(m_buffer));
+//	}
+//};
+
 
 void IOCP()
 {
-	SOCKET sock = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-	if (sock == INVALID_SOCKET)
-	{
-		CTool::ShowError();
-		return;
-	}
-	HANDLE hIOCP = CreateIoCompletionPort(INVALID_HANDLE_VALUE, NULL, sock, 4);
-	SOCKET client = WSASocket(AF_INET, SOCK_STREAM, 0, NULL, 0, WSA_FLAG_OVERLAPPED);
-	CreateIoCompletionPort((HANDLE)sock, hIOCP, 0, 0);
-	sockaddr_in addr;
-	addr.sin_family = AF_INET;
-	addr.sin_addr.s_addr = INADDR_ANY;
-	addr.sin_port = htons(9527);
-	if (bind(sock, (sockaddr*)&addr, sizeof(addr)) == SOCKET_ERROR) return;
-	if (listen(sock, 5) == SOCKET_ERROR) return;
-
-	COverlapped overlapped;
-	overlapped.m_operator = 1;//accept
-	memset(&overlapped.m_overlapped, 0, sizeof(OVERLAPPED));
-	DWORD receved = 0;
-	if (AcceptEx(sock, client, overlapped.m_buffer, 0, sizeof(sockaddr_in) + 16, sizeof(sockaddr_in) + 16, &receved, &overlapped.m_overlapped) == FALSE) {
-		int err = WSAGetLastError();
-		if (err != ERROR_IO_PENDING) {
-			CTool::ShowError();
-			return;
-		}
-	}
-
-	overlapped.m_operator = 2;//send
-	//WSASend();
-	overlapped.m_operator = 3;//recv
-	//WSARecv();
-	//开启线程处理IOCP
-	while (true) {//代表一个线程
-		DWORD transferred = 0;
-		ULONG_PTR Key = 0;
-		LPOVERLAPPED pOverlapped = NULL;
-		if (GetQueuedCompletionStatus(hIOCP, &transferred, &Key, &pOverlapped, INFINITE)) {
-			COverlapped* pO = CONTAINING_RECORD(pOverlapped, COverlapped, m_overlapped);
-			switch (pO->m_operator) {
-			case 1://accept
-			{
-			}
-			}
-		}
-	}
+	CServer server;
+	server.StartService();
+	getchar();
 }
 
 int main()

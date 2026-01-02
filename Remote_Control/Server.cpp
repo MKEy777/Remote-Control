@@ -251,7 +251,7 @@ int CClient::Recv()
 	if (ret <= 0)return -1;
 	m_used += (size_t)ret;
 	//TODO:½âÎöÊý¾Ý
-	//CTool::Dump((BYTE*)m_buffer.data(), ret);
+	CTool::Dump((BYTE*)m_buffer.data(), ret);
 	return 0;
 }
 
