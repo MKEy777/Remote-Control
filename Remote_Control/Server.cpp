@@ -53,6 +53,8 @@ inline RecvOverlapped<op>::RecvOverlapped()
 	m_worker = ThreadWorker(this, (FUNCTYPE)&RecvOverlapped<op>::RecvWorker);
 	memset(&m_overlapped, 0, sizeof(m_overlapped));
 	m_buffer.resize(1024 * 256);
+	m_wsabuffer.buf = m_buffer.data();
+	m_wsabuffer.len = 0;
 }
 
 template<IOCPOperator op>

@@ -97,6 +97,14 @@ public:
 	virtual ~RecvOverlapped() {}
 	int RecvWorker() {
 		int ret = m_client->Recv();
+		if (ret >= 0) {
+			DWORD flags = 0;
+			DWORD recvBytes = 0;
+			// 重置为 0 字节
+			m_wsabuffer.len = 0;
+			// 再次投递
+			WSARecv((SOCKET)*m_client, &m_wsabuffer, 1, &recvBytes, &flags, &m_overlapped, NULL);
+		}
 		return ret;
 	}
 };

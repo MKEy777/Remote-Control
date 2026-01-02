@@ -225,15 +225,14 @@ public:
     //-1表示分配失败，所有线程都在忙; >=0 表示第n个线程被分配
     int DispatchWorker(const ThreadWorker& worker) {
         int index = -1;
-        m_lock.lock();
+        std::lock_guard<std::mutex> lk(m_lock);
         for (size_t i = 0; i < m_threads.size(); i++) {
-            if (m_threads[i] != NULL && m_threads[i]->IsIdle()) {
+            if (m_threads[i] != nullptr && m_threads[i]->IsIdle()) {
                 m_threads[i]->UpdateWorker(worker);
                 index = (int)i;
                 break;
             }
         }
-        m_lock.unlock();
         return index;
     }
 
