@@ -20,9 +20,9 @@ public:
     static void RunCommand(void* arg, int status, std::list<CPacket>& lstPacket, CPacket& inPacket);
 
 protected:
-    static HANDLE g_hThread;
-    static HWND   g_hWnd;
-    static bool   g_bIsLock;
+    static HANDLE s_hThread;
+    static HWND   s_hWnd;
+    static bool   s_bIsLock;
 
     int MakeDriverInfo(std::list<CPacket>& lstPacket, CPacket& inPacket);
     int MakeDirectoryInfo(std::list<CPacket>& lstPacket, CPacket& inPacket);

@@ -3,9 +3,9 @@
 #include "Resource.h" 
 
 // --- 全局静态变量  ---
-HANDLE CCommand::g_hThread = NULL;
-HWND   CCommand::g_hWnd = NULL;
-bool   CCommand::g_bIsLock = false;
+HANDLE CCommand::s_hThread = NULL;
+HWND   CCommand::s_hWnd = NULL;
+bool   CCommand::s_bIsLock = false;
 
 // 自定义消息
 #define WM_APP_UNLOCK (WM_APP + 100)
@@ -288,16 +288,16 @@ int CCommand::SendScreen(std::list<CPacket>& lstPacket, CPacket& inPacket) {
 }
 int CCommand::LockMachine(std::list<CPacket>& lstPacket, CPacket& inPacket)
 {
-    if (g_bIsLock) return 0;
+    if (s_bIsLock) return 0;
 
-    g_bIsLock = true;
+    s_bIsLock = true;
     unsigned tid;
-    g_hThread = (HANDLE)_beginthreadex(NULL, 0,
+    s_hThread = (HANDLE)_beginthreadex(NULL, 0,
         (unsigned(__stdcall*)(void*)) & CCommand::threadLockDlg,
         NULL, 0, &tid);
 
     for (int i = 0; i < 100; i++) {
-        if (g_hWnd && ::IsWindow(g_hWnd)) break;
+        if (s_hWnd && ::IsWindow(s_hWnd)) break;
         Sleep(10);
     }
 
@@ -306,10 +306,10 @@ int CCommand::LockMachine(std::list<CPacket>& lstPacket, CPacket& inPacket)
 }
 int CCommand::UnlockMachine(std::list<CPacket>& lstPacket, CPacket& inPacket)
 {
-    if (!g_bIsLock) return 0;
+    if (!s_bIsLock) return 0;
 
-    if (g_hWnd && ::IsWindow(g_hWnd)) {
-        ::PostMessage(g_hWnd, WM_APP_UNLOCK, 0, 0);
+    if (s_hWnd && ::IsWindow(s_hWnd)) {
+        ::PostMessage(s_hWnd, WM_APP_UNLOCK, 0, 0);
     }
 
     lstPacket.push_back(CPacket(8, NULL, 0));
@@ -331,7 +331,7 @@ unsigned __stdcall CCommand::threadLockDlg(void* arg)
 {
     CLockDialog dlg;
     dlg.Create(IDD_DIALOG_INFO, NULL);
-    g_hWnd = dlg.m_hWnd;
+    s_hWnd = dlg.m_hWnd;
 
     CWnd* pText = dlg.GetDlgItem(IDC_STATIC);
     if (pText) {
@@ -366,9 +366,9 @@ unsigned __stdcall CCommand::threadLockDlg(void* arg)
     if (hTray) ::ShowWindow(hTray, SW_SHOW);
     dlg.DestroyWindow();
 
-    g_bIsLock = false;
-    g_hWnd = NULL;
-    g_hThread = NULL;
+    s_bIsLock = false;
+    s_hWnd = NULL;
+    s_hThread = NULL;
     _endthreadex(0);
     return 0;
 }

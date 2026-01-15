@@ -85,7 +85,7 @@ private:
 	std::shared_ptr<ACCEPTOVERLAPPED> m_overlapped;
 	std::shared_ptr<RECVOVERLAPPED> m_recv;
 	std::shared_ptr<SENDOVERLAPPED> m_send;
-	std::vector<char> m_buffer;//这是 client 自己的 buffer（AcceptEx 用到）
+	std::vector<char> m_buffer;//client 自己的 buffer（AcceptEx 用到）
 	size_t m_used;//已经使用的缓冲区大小
 	sockaddr_in m_laddr;
 	sockaddr_in m_raddr;
@@ -131,6 +131,7 @@ public:
 };
 
 using SENDCALLBACK = CSendQueue<CClient, std::vector<char>>::Callback;
+
 template<IOCPOperator>
 class SendOverlapped : public COverlapped{
 public:

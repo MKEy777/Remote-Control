@@ -26,6 +26,7 @@ public:
 			m_callback = callback;
 			m_arg = arg;
 			while (true) {
+				//阻塞等待客户端连接
 				if (AcceptClient() == false) {
 					if (count >= 3) {
 						return -2;
